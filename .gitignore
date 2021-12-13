@@ -34,4 +34,6 @@
 # Visual Studio
 /.vs
 /Debug
+/Debug/
 /Release
+/Release/
