@@ -12,7 +12,7 @@ void DebugOutputFormatString( const char* format, ...) {
 #ifdef _DEBUG
 	va_list valist;
 	va_start( valist, format);
-	vprintf( format, valist);
+	vprintf_s( format, valist);
 	va_end(valist);
 #endif
 }
@@ -38,9 +38,11 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ウィンドウ クラス の 生成＆ 登録
 	WNDCLASSEX w = {};
 
+	int window_width = 800;
+	int window_height = 640;
 	w.cbSize = sizeof( WNDCLASSEX);
 	w.lpfnWndProc = (WNDPROC)WindowProcedure; // コール バック 関数 の 指定
-	w.lpszClassName = _T("DX12Sample"); // アプリケーション クラス 名（ 適当 で よい）
+	w.lpszClassName = ("DX12Sample"); // アプリケーション クラス 名（ 適当 で よい）
 	w.hInstance = GetModuleHandle(nullptr); // ハンドル の 取得
 	RegisterClassEx(&w); // アプリケーション クラス（ ウィンドウ クラス の 指定 を OS に 伝える）
 	RECT wrc = { 0, 0, window_width, window_height};// ウィンドウサイズ を 決める
@@ -51,7 +53,7 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ウィンドウ オブジェクト の 生成
 	HWND hwnd = CreateWindow(
 		w. lpszClassName,// クラス 名 指定
-		_T("DX12テスト"), // タイトル バー の 文字
+		("DX12テスト"), // タイトル バー の 文字
 		WS_OVERLAPPEDWINDOW, // タイトル バー と 境界線 が ある ウィンドウ
 		CW_USEDEFAULT, // 表示 x 座標 は OS に お 任せ
 		CW_USEDEFAULT, // 表示 y 座標 は OS に お 任せ
@@ -65,8 +67,26 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ウィンドウ 表示
 	ShowWindow( hwnd, SW_SHOW);
 
+	MSG msg = {};
+	
+	while (true) {
+		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+			TranslateMessage(&msg); DispatchMessage(&msg);
+		}
+
+		//アプリケーション が 終わる とき に message が WM_ QUIT に なる
+		if (msg. message == WM_QUIT) {
+			break;
+		}
+	}
+	
+	//もう クラス は 使わ ない ので 登録 解除 する
+	UnregisterClass( w. lpszClassName, w. hInstance);
+
+
+
 
 	DebugOutputFormatString(" Show window test.");
-	getchar();
+	//getchar();
 	return 0;
 }
