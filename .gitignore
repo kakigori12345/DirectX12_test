@@ -33,5 +33,5 @@
 
 # Visual Studio
 /.vs
-/Debug/
-/Release/
+/Debug
+/Release

@@ -1,5 +1,0 @@
-﻿  main.cpp
-C:\Users\e1212\Desktop\directX12\DirectX12_test\chapter3\main.cpp(43,20): error C3861: '_T': 識別子が見つかりませんでした
-C:\Users\e1212\Desktop\directX12\DirectX12_test\chapter3\main.cpp(46,21): error C2065: 'window_width': 定義されていない識別子です。
-C:\Users\e1212\Desktop\directX12\DirectX12_test\chapter3\main.cpp(46,35): error C2065: 'window_height': 定義されていない識別子です。
-C:\Users\e1212\Desktop\directX12\DirectX12_test\chapter3\main.cpp(52,1): error C3861: '_T': 識別子が見つかりませんでした
