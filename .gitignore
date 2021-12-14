@@ -32,6 +32,6 @@
 *.app
 
 # Visual Studio
-/.vs
-*/Debug/*
-*/Release/*
+\.vs
+.\*Debug/*
+.\*Release/*
