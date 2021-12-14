@@ -1,4 +1,13 @@
 #include <Windows.h>
+#include <vector>
+
+#include <d3d12.h>
+#include <dxgi1_6.h>
+
+#pragma comment( lib, "d3d12.lib")
+#pragma comment( lib, "dxgi.lib")
+
+
 #ifdef _DEBUG 
 #include < iostream >
 
@@ -35,6 +44,39 @@ int main() {
 #else 
 int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int) {
 #endif
+	// 3Dオブジェクトの生成
+	ID3D12Device* _dev = nullptr;
+	IDXGIFactory6* _dxgiFactory = nullptr;
+	IDXGISwapChain4* _swapchain = nullptr;
+
+
+	// ファクトリー
+	auto result = CreateDXGIFactory1(IID_PPV_ARGS(&_dxgiFactory));
+	
+	// アダプター
+	std::vector <IDXGIAdapter*> adapters; //ここにアダプターを列挙する
+	IDXGIAdapter* tmpAdapter = nullptr;
+	for (int i = 0; _dxgiFactory->EnumAdapters(i, &tmpAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+		adapters.push_back(tmpAdapter);
+	}
+	// アダプターを識別するための情報を取得（DXGI_ADAPTER＿DESC構造体）
+	for (auto adpt : adapters) {
+		DXGI_ADAPTER_DESC adesc = {};
+		adpt->GetDesc(&adesc); // アダプターの説明オブジェクト取得
+		std::wstring strDesc = adesc.Description;
+
+		// 探したいアダプターの名前を確認
+		if (strDesc.find(L"NVIDIA") != std::string::npos) {
+			tmpAdapter = adpt;
+			break;
+		}
+	}
+
+	// デバイスオブジェクト
+	D3D12CreateDevice(tmpAdapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&_dev));
+	
+
+
 	// ウィンドウ クラス の 生成＆ 登録
 	WNDCLASSEX w = {};
 
