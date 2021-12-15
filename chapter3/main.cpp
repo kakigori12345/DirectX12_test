@@ -13,37 +13,79 @@
 
 #endif using namespace std;
 
-// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
-// @param format フォーマット（% d とか% f とか の） 
-// @param 可変 長 引数 
-// @remarks この 関数 は デバッグ 用 です。 デバッグ 時 にしか 動作 し ませ ん
-void DebugOutputFormatString( const char* format, ...) { 
+namespace {
+
+	// 定数
+	int window_width = 800;
+	int window_height = 640;
+
+
+
+	// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
+	// @param format フォーマット（% d とか% f とか の） 
+	// @param 可変 長 引数 
+	// @remarks この 関数 は デバッグ 用 です。 デバッグ 時 にしか 動作 し ませ ん
+	void DebugOutputFormatString(const char* format, ...) {
 #ifdef _DEBUG
-	va_list valist;
-	va_start( valist, format);
-	vprintf_s( format, valist);
-	va_end(valist);
+		va_list valist;
+		va_start(valist, format);
+		vprintf_s(format, valist);
+		va_end(valist);
 #endif
-}
-
-// 面倒 だ けど 書か なけれ ば いけ ない 関数
-LRESULT WindowProcedure( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-	// ウィンドウ が 破棄 さ れ たら 呼ば れる
-	if (msg == WM_DESTROY) { PostQuitMessage( 0);
-	// OS に対して「 もうこ の アプリ は 終わる」 と 伝える
-	return 0;
 	}
-	
-	return DefWindowProc(hwnd, msg, wparam, lparam); // 既定 の 処理 を 行う
-}
 
+	// 面倒 だ けど 書か なけれ ば いけ ない 関数
+	LRESULT WindowProcedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+		// ウィンドウ が 破棄 さ れ たら 呼ば れる
+		if (msg == WM_DESTROY) {
+			PostQuitMessage(0);
+			// OS に対して「 もうこ の アプリ は 終わる」 と 伝える
+			return 0;
+		}
+
+		return DefWindowProc(hwnd, msg, wparam, lparam); // 既定 の 処理 を 行う
+	}
+
+}
 
 
 #ifdef _DEBUG
 int main() {
 #else 
-int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int) {
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #endif
+	// ウィンドウ クラス の 生成＆ 登録
+	WNDCLASSEX w = {};
+
+	w.cbSize = sizeof(WNDCLASSEX);
+	w.lpfnWndProc = (WNDPROC)WindowProcedure; // コール バック 関数 の 指定
+	w.lpszClassName = ("DX12Sample"); // アプリケーション クラス 名（ 適当 で よい）
+	w.hInstance = GetModuleHandle(nullptr); // ハンドル の 取得
+	RegisterClassEx(&w); // アプリケーション クラス（ ウィンドウ クラス の 指定 を OS に 伝える）
+	RECT wrc = { 0, 0, window_width, window_height };// ウィンドウサイズ を 決める
+
+	// 関数 を 使っ て ウィンドウ の サイズ を 補正 する
+	AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
+
+	// ウィンドウ オブジェクト の 生成
+	HWND hwnd = CreateWindow(
+		w.lpszClassName,// クラス 名 指定
+		("DX12テスト"), // タイトル バー の 文字
+		WS_OVERLAPPEDWINDOW, // タイトル バー と 境界線 が ある ウィンドウ
+		CW_USEDEFAULT, // 表示 x 座標 は OS に お 任せ
+		CW_USEDEFAULT, // 表示 y 座標 は OS に お 任せ
+		wrc.right - wrc.left, // ウィンドウ 幅
+		wrc.bottom - wrc.top, // ウィンドウ 高
+		nullptr, // 親 ウィンドウ ハンドル
+		nullptr, // メニュー ハンドル
+		w.hInstance, // 呼び出し アプリケーション ハンドル
+		nullptr); // 追加 パラメーター
+
+	// ウィンドウ 表示
+	ShowWindow(hwnd, SW_SHOW);
+
+
+
 	// 3Dオブジェクトの生成
 	ID3D12Device* _dev = nullptr;
 	IDXGIFactory6* _dxgiFactory = nullptr;
@@ -52,7 +94,7 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// ファクトリー
 	auto result = CreateDXGIFactory1(IID_PPV_ARGS(&_dxgiFactory));
-	
+
 	// アダプター
 	std::vector <IDXGIAdapter*> adapters; //ここにアダプターを列挙する
 	IDXGIAdapter* tmpAdapter = nullptr;
@@ -105,38 +147,51 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int) {
 		return 0;
 	}
 
+	// スワップチェーンの作成
+	DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
 
-	// ウィンドウ クラス の 生成＆ 登録
-	WNDCLASSEX w = {};
+	swapchainDesc.Width = window_width;
+	swapchainDesc.Height = window_height;
+	swapchainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	swapchainDesc.Stereo = false;
+	swapchainDesc.SampleDesc.Count = 1;
+	swapchainDesc.SampleDesc.Quality = 0;
+	swapchainDesc.BufferUsage = DXGI_USAGE_BACK_BUFFER;
+	swapchainDesc.BufferCount = 2;
+	swapchainDesc.Scaling = DXGI_SCALING_STRETCH; // バックバッファーは伸び縮み可能
+	swapchainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // フリップ後は速やかに破棄
+	swapchainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+	swapchainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // ウィンドウ⇔フルスクリーン切り替え可能
 
-	int window_width = 800;
-	int window_height = 640;
-	w.cbSize = sizeof( WNDCLASSEX);
-	w.lpfnWndProc = (WNDPROC)WindowProcedure; // コール バック 関数 の 指定
-	w.lpszClassName = ("DX12Sample"); // アプリケーション クラス 名（ 適当 で よい）
-	w.hInstance = GetModuleHandle(nullptr); // ハンドル の 取得
-	RegisterClassEx(&w); // アプリケーション クラス（ ウィンドウ クラス の 指定 を OS に 伝える）
-	RECT wrc = { 0, 0, window_width, window_height};// ウィンドウサイズ を 決める
-													 
-	// 関数 を 使っ て ウィンドウ の サイズ を 補正 する
-	AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
+	result = _dxgiFactory->CreateSwapChainForHwnd(
+		_cmdQueue,
+		hwnd,
+		&swapchainDesc,
+		nullptr,
+		nullptr,
+		(IDXGISwapChain1**)&_swapchain);
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating SwapChain.");
+		return 0;
+	}
 
-	// ウィンドウ オブジェクト の 生成
-	HWND hwnd = CreateWindow(
-		w. lpszClassName,// クラス 名 指定
-		("DX12テスト"), // タイトル バー の 文字
-		WS_OVERLAPPEDWINDOW, // タイトル バー と 境界線 が ある ウィンドウ
-		CW_USEDEFAULT, // 表示 x 座標 は OS に お 任せ
-		CW_USEDEFAULT, // 表示 y 座標 は OS に お 任せ
-		wrc.right - wrc.left, // ウィンドウ 幅
-		wrc.bottom - wrc.top, // ウィンドウ 高
-		nullptr, // 親 ウィンドウ ハンドル
-		nullptr, // メニュー ハンドル
-		w.hInstance, // 呼び出し アプリケーション ハンドル
-		nullptr); // 追加 パラメーター
+	// ディスクリプタヒープの作成
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; //レンダーターゲットビュー
+	heapDesc.NodeMask = 0;
+	heapDesc.NumDescriptors = 2; //表裏の２つ
+	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	
-	// ウィンドウ 表示
-	ShowWindow( hwnd, SW_SHOW);
+	ID3D12DescriptorHeap* rtvHeaps = nullptr;
+	result = _dev->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeaps));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating DescriptorHeap.");
+		return 0;
+	}
+
+
+
 
 	MSG msg = {};
 	
