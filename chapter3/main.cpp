@@ -74,7 +74,36 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// デバイスオブジェクト
 	D3D12CreateDevice(tmpAdapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&_dev));
-	
+
+
+	// コマンドリストの作成とコマンドアロケータ
+	ID3D12CommandAllocator* _cmdAllocator = nullptr;
+	ID3D12GraphicsCommandList* _cmdList = nullptr;
+
+	result = _dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&_cmdAllocator));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating CommandAllocator.");
+		return 0;
+	}
+	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator, nullptr, IID_PPV_ARGS(&_cmdList));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating CommandList.");
+		return 0;
+	}
+
+	// キューの作成
+	D3D12_COMMAND_QUEUE_DESC cmdQueueDesc = {};
+	cmdQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE; //タイムアウトなし
+	cmdQueueDesc.NodeMask = 0; //アダプター一つなので０でいい（らしい）
+	cmdQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+	cmdQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	// 生成
+	ID3D12CommandQueue* _cmdQueue = nullptr;
+	result = _dev->CreateCommandQueue(&cmdQueueDesc, IID_PPV_ARGS(&_cmdQueue));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating CommandQueue.");
+		return 0;
+	}
 
 
 	// ウィンドウ クラス の 生成＆ 登録
