@@ -193,7 +193,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// スワップチェーンとビューの関連付け
 	std::vector<ID3D12Resource*> _backBuffers(swapchainDesc.BufferCount);
 	D3D12_CPU_DESCRIPTOR_HANDLE handle = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
-	for (unsigned int idx = 0; idx < swapchainDesc.BufferCount; ++idx) {
+	for (UINT idx = 0; idx < swapchainDesc.BufferCount; ++idx) {
 		result = _swapchain->GetBuffer(idx, IID_PPV_ARGS(&_backBuffers[idx]));
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Getting BackBuffer.");
@@ -209,11 +209,36 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 
-
-
 	MSG msg = {};
 	
 	while (true) {
+		// メインループの処理
+		{
+			// 1.コマンドアロケータとコマンドリストをクリア
+			result = _cmdAllocator->Release();
+			if (result != S_OK) {
+				DebugOutputFormatString("Missed at Reset Allocator.");
+				return 0;
+			}
+
+			// 2.レンダーターゲットをバックバッファにセット
+			// 現在のバックバッファを取得
+			UINT bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
+			auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
+			rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			_cmdList->OMSetRenderTargets(1, &rtvH, true, nullptr);
+
+			// 3.レンダーターゲットを指定色でクリア
+
+			// 4.レンダーターゲットをクローズ
+
+			// 5.たまったコマンドをコマンドリストに投げる
+
+			// 6.スワップチェーンのフリップ処理
+
+		}
+
+		// メッセージ処理
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg); DispatchMessage(&msg);
 		}
