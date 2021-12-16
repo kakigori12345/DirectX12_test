@@ -184,10 +184,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	
 	ID3D12DescriptorHeap* rtvHeaps = nullptr;
-	result = _dev->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeaps));
+	result = _dev->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeaps)); //この段階ではまだ RTV ではない
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating DescriptorHeap.");
 		return 0;
+	}
+
+	// スワップチェーンとビューの関連付け
+	std::vector<ID3D12Resource*> _backBuffers(swapchainDesc.BufferCount);
+	D3D12_CPU_DESCRIPTOR_HANDLE handle = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
+	for (unsigned int idx = 0; idx < swapchainDesc.BufferCount; ++idx) {
+		result = _swapchain->GetBuffer(idx, IID_PPV_ARGS(&_backBuffers[idx]));
+		if (result != S_OK) {
+			DebugOutputFormatString("Missed at Getting BackBuffer.");
+			return 0;
+		}
+		// 先ほど作成したディスクリプタヒープを RTV として設定する
+		_dev->CreateRenderTargetView(
+			_backBuffers[idx], 
+			nullptr, 
+			handle);
+		// ハンドルを一つずらす
+		handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	}
 
 
