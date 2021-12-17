@@ -241,6 +241,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			UINT bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
 			auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
 			rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			// リソースバリアでバッファの使い道を GPU に通知する
+			D3D12_RESOURCE_BARRIER BarrierDesc = {};
+			BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION; //遷移
+			BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			BarrierDesc.Transition.pResource = _backBuffers[bbIdx];
+			BarrierDesc.Transition.Subresource = 0;
+			BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+			BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
+			// レンダーターゲットとして指定する
 			_cmdList->OMSetRenderTargets(1, &rtvH, true, nullptr);
 
 			// 3.レンダーターゲットを指定色でクリア
@@ -260,14 +270,41 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&_fence));
 			// GPUの処理が完了するまで待つ
 			_cmdQueue->Signal(_fence, ++_fenceVal);
+			if (_fence->GetCompletedValue() != _fenceVal) {
+				// イベントハンドルを取得
+				auto event = CreateEvent(nullptr, false, false, nullptr);
+
+				_fence->SetEventOnCompletion(_fenceVal, event);
+
+				// イベントが発生するまで待機
+				WaitForSingleObject(event, INFINITE);
+
+				// イベントハンドルを閉じる
+				CloseHandle(event);
+			}
 			while (_fence->GetCompletedValue() != _fenceVal) { ; }
 			// クリア
-			_cmdAllocator->Reset();
-			_cmdList->Reset(_cmdAllocator, nullptr);
+			result = _cmdAllocator->Reset();
+			if (result != S_OK) {
+				DebugOutputFormatString("Missed at Reset Allocator.");
+				return 0;
+			}
+			result = _cmdList->Reset(_cmdAllocator, nullptr);
+			if (result != S_OK) {
+				DebugOutputFormatString("Missed at Reset CommandList.");
+				return 0;
+			}
 
 			// 6.スワップチェーンのフリップ処理
-			_swapchain->Present(1, 0);
+			// 状態遷移
+			BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
+			result = _swapchain->Present(1, 0);
+			if (result != S_OK) {
+				DebugOutputFormatString("Missed at Present Swapchain.");
+				return 0;
+			}
 
 		}
 
