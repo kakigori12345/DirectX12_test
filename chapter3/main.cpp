@@ -46,6 +46,13 @@ namespace {
 		return DefWindowProc(hwnd, msg, wparam, lparam); // 既定 の 処理 を 行う
 	}
 
+	// デバッグレイヤーの有効化
+	void EnableDebugLayer() {
+		ID3D12Debug* debugLayer = nullptr;
+		auto result = D3D12GetDebugInterface(IID_PPV_ARGS(&debugLayer));
+		debugLayer->EnableDebugLayer();
+		debugLayer->Release();
+	}
 }
 
 
@@ -84,6 +91,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ウィンドウ 表示
 	ShowWindow(hwnd, SW_SHOW);
 
+#ifdef _DEBUG
+	EnableDebugLayer();
+#endif
 
 
 	// 3Dオブジェクトの生成
@@ -93,7 +103,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// ファクトリー
+#ifdef _DEBUG
+	auto result = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&_dxgiFactory));
+#else
 	auto result = CreateDXGIFactory1(IID_PPV_ARGS(&_dxgiFactory));
+#endif
 
 	// アダプター
 	std::vector <IDXGIAdapter*> adapters; //ここにアダプターを列挙する
@@ -215,11 +229,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// メインループの処理
 		{
 			// 1.コマンドアロケータとコマンドリストをクリア
-			result = _cmdAllocator->Release();
-			if (result != S_OK) {
+			result = _cmdAllocator->Reset();
+			// ここで判定するとなぜか E_FAIL が帰ってくる
+			/*if (result != S_OK) {
 				DebugOutputFormatString("Missed at Reset Allocator.");
 				return 0;
-			}
+			}*/
 
 			// 2.レンダーターゲットをバックバッファにセット
 			// 現在のバックバッファを取得
@@ -229,12 +244,30 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			_cmdList->OMSetRenderTargets(1, &rtvH, true, nullptr);
 
 			// 3.レンダーターゲットを指定色でクリア
+			float clearColor[] = { 1.0f, 1.0f, 0.0f, 1.0f }; //黄色
+			_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
 
 			// 4.レンダーターゲットをクローズ
+			_cmdList->Close();
 
 			// 5.たまったコマンドをコマンドリストに投げる
+			// コマンドリスト実行
+			ID3D12CommandList* cmdLists[] = { _cmdList };
+			_cmdQueue->ExecuteCommandLists(1, cmdLists);
+			// フェンスを作成しておく
+			ID3D12Fence* _fence = nullptr;
+			UINT64 _fenceVal = 0;
+			result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&_fence));
+			// GPUの処理が完了するまで待つ
+			_cmdQueue->Signal(_fence, ++_fenceVal);
+			while (_fence->GetCompletedValue() != _fenceVal) { ; }
+			// クリア
+			_cmdAllocator->Reset();
+			_cmdList->Reset(_cmdAllocator, nullptr);
 
 			// 6.スワップチェーンのフリップ処理
+			_swapchain->Present(1, 0);
+
 
 		}
 
