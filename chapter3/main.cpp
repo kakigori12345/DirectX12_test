@@ -1,12 +1,17 @@
 #include <Windows.h>
 #include <vector>
 
+// Direct3D
 #include <d3d12.h>
 #include <dxgi1_6.h>
-
 #pragma comment( lib, "d3d12.lib")
 #pragma comment( lib, "dxgi.lib")
 
+// シェーダーのコンパイル
+#include <d3dcompiler.h>
+#pragma comment( lib, "d3dcompiler.lib")
+
+// 数学関数
 #include <DirectXMath.h>
 
 
@@ -281,6 +286,52 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress(); // バッファの仮想アドレス
 	vbView.SizeInBytes = sizeof(vertices); //全バイト数
 	vbView.StrideInBytes = sizeof(vertices[0]); //１頂点当たりのバイト数
+
+	// シェーダーの読み込みと生成
+	ID3DBlob* _vsBlob = nullptr;
+	ID3DBlob* _psBlob = nullptr;
+	ID3DBlob* errorBlob = nullptr;
+
+	result = D3DCompileFromFile(
+		L"BasicVertexShader.hlsl", 
+		nullptr,
+		D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		"BasicVS",
+		"vs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
+		0, 
+		&_vsBlob, 
+		&errorBlob);
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Compiling Vertex Shader.");
+		return 0;
+	}
+
+	result = D3DCompileFromFile(
+		L"BasicPixelShader.hlsl",
+		nullptr,
+		D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		"BasicPS",
+		"vs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
+		0,
+		&_psBlob,
+		&errorBlob);
+	if (result != S_OK) {
+		// 詳細なエラー表示
+		std::string errstr;
+		errstr.resize(errorBlob->GetBufferSize());
+		std::copy_n(
+			(char*)errorBlob->GetBufferPointer(),
+			errorBlob->GetBufferSize(),
+			errstr.begin());
+		OutputDebugStringA(errstr.c_str());
+
+		DebugOutputFormatString("Missed at Compiling Pixel Shader.");
+		return 0;
+	}
+
+
 
 
 	MSG msg = {};
