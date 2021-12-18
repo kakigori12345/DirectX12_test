@@ -7,11 +7,15 @@
 #pragma comment( lib, "d3d12.lib")
 #pragma comment( lib, "dxgi.lib")
 
+#include <DirectXMath.h>
+
 
 #ifdef _DEBUG 
 #include < iostream >
 
-#endif using namespace std;
+#endif
+using namespace std;
+using namespace DirectX;
 
 namespace {
 
@@ -221,6 +225,62 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// ハンドルを一つずらす
 		handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	}
+
+
+	// ポリゴンの表示
+	// 頂点情報作成
+	XMFLOAT3 vertices[] = {
+		{-1.0f, -1.0f, 0.0f}, // 左下
+		{-1.0f,  1.0f, 0.0f}, // 左上
+		{ 1.0f, -1.0f, 0.0f}, // 右下
+	};
+
+	// 頂点バッファの作成
+	D3D12_HEAP_PROPERTIES heapprop = {};
+	heapprop.Type = D3D12_HEAP_TYPE_UPLOAD;
+	heapprop.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapprop.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+	D3D12_RESOURCE_DESC resdesc = {};
+	resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	resdesc.Width = sizeof(vertices); //頂点情報が入るだけのサイズ
+	resdesc.Height = 1;
+	resdesc.DepthOrArraySize = 1;
+	resdesc.MipLevels = 1;
+	resdesc.Format = DXGI_FORMAT_UNKNOWN;
+	resdesc.SampleDesc.Count = 1;
+	resdesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	ID3D12Resource* vertBuff = nullptr;
+	result = _dev->CreateCommittedResource(
+		&heapprop,
+		D3D12_HEAP_FLAG_NONE,
+		&resdesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&vertBuff));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating CommittedResource.");
+		return 0;
+	}
+
+	// 頂点情報のコピー
+	XMFLOAT3* vertMap = nullptr;
+	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Mapping Vertex.");
+		return 0;
+	}
+
+	std::copy(std::begin(vertices), std::end(vertices), vertMap);
+	vertBuff->Unmap(0, nullptr); // verMap の情報を渡したので、マップを解除する
+
+	// 頂点バッファビューの作成
+	D3D12_VERTEX_BUFFER_VIEW vbView = {};
+	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress(); // バッファの仮想アドレス
+	vbView.SizeInBytes = sizeof(vertices); //全バイト数
+	vbView.StrideInBytes = sizeof(vertices[0]); //１頂点当たりのバイト数
 
 
 	MSG msg = {};
