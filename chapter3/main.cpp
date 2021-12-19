@@ -312,7 +312,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		nullptr,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		"BasicPS",
-		"vs_5_0",
+		"ps_5_0",
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
 		0,
 		&_psBlob,
