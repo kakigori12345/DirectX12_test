@@ -331,6 +331,65 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		return 0;
 	}
 
+	// 頂点レイアウト
+	D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+		{
+			"POSITION",		// セマンティクス名
+			0,				// 同じセマンティクス名の時に使うインデックス
+			DXGI_FORMAT_R32G32B32_FLOAT,	// フォーマット（要素数とビット数で型を表す）
+			0,								// 入力スロットインデックス
+			D3D12_APPEND_ALIGNED_ELEMENT,	// データのオフセット位置
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,	// 
+			0				// 一度に描画するインスタンスの数
+		},
+	};
+
+
+
+	// グラフィクスパイプラインを作成
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeline = {};
+	// 頂点シェーダー、ピクセルシェーダーを設定
+	gpipeline.pRootSignature = nullptr; //後々設定
+	gpipeline.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
+	gpipeline.VS.BytecodeLength = _vsBlob->GetBufferSize();
+	gpipeline.PS.pShaderBytecode = _psBlob->GetBufferPointer();
+	gpipeline.PS.BytecodeLength = _psBlob->GetBufferSize();
+	// サンプルマスクとラスタライザーの設定
+	gpipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK; //デフォルトのサンプルマスク（0xffffffff）
+	gpipeline.RasterizerState.MultisampleEnable = false; //アンチエイリアスは（今は）使わない
+	gpipeline.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; //カリングしない
+	gpipeline.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID; //中身を塗りつぶす
+	gpipeline.RasterizerState.DepthClipEnable = true; //深度方向のクリッピングは有効に
+
+	gpipeline.BlendState.AlphaToCoverageEnable = false;
+	gpipeline.BlendState.IndependentBlendEnable = false;
+
+	D3D12_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc = {};
+	renderTargetBlendDesc.BlendEnable = false;
+	renderTargetBlendDesc.LogicOpEnable = false;
+	renderTargetBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+	gpipeline.BlendState.RenderTarget[0] = renderTargetBlendDesc;
+
+	// 入力レイアウト設定
+	gpipeline.InputLayout.pInputElementDescs = inputLayout;		//レイアウト先頭アドレス
+	gpipeline.InputLayout.NumElements = _countof(inputLayout);	//レイアウト配列の要素数
+
+	// その他
+	gpipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;	//カットなし
+	gpipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;	//三角形
+	gpipeline.NumRenderTargets = 1;	//今は一つ（マルチレンダーではない）
+	gpipeline.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;	//0～1に正規化されたRGBA
+	gpipeline.SampleDesc.Count = 1;		//サンプリングは１ピクセルにつき１
+	gpipeline.SampleDesc.Quality = 0;	//クオリティは最低
+
+	// グラフィクスパイプラインステートオブジェクトの生成
+	ID3D12PipelineState* _pipelinestate = nullptr;
+	result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(&_pipelinestate));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating Graphics Pipeline State.");
+		return 0;
+	}
 
 
 
