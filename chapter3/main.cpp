@@ -383,6 +383,37 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	gpipeline.SampleDesc.Count = 1;		//サンプリングは１ピクセルにつき１
 	gpipeline.SampleDesc.Quality = 0;	//クオリティは最低
 
+
+	// ルートシグネチャの作成
+	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	ID3DBlob* rootSigBlob = nullptr;
+	result = D3D12SerializeRootSignature(
+		&rootSignatureDesc,
+		D3D_ROOT_SIGNATURE_VERSION_1_0,
+		&rootSigBlob,
+		&errorBlob);
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Serializing Root Signature.");
+		return 0;
+	}
+
+	ID3D12RootSignature* rootSignature = nullptr;
+	result = _dev->CreateRootSignature(
+		0,	//nodemask
+		rootSigBlob->GetBufferPointer(),
+		rootSigBlob->GetBufferSize(),
+		IID_PPV_ARGS(&rootSignature));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating Root Signature");
+		return 0;
+	}
+	rootSigBlob->Release();
+	// 作成したルートシグネチャをパイプラインに設定
+	gpipeline.pRootSignature = rootSignature;
+
+
 	// グラフィクスパイプラインステートオブジェクトの生成
 	ID3D12PipelineState* _pipelinestate = nullptr;
 	result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(&_pipelinestate));
