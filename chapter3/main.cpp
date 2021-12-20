@@ -235,18 +235,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ポリゴンの表示
 	// 頂点情報作成
 	XMFLOAT3 vertices[] = {
-		{-0.4f, -0.7f, 0.0f}, // 左下
-		{-0.4f,  0.7f, 0.0f}, // 左上
-		{ 0.4f, -0.7f, 0.0f}, // 右下
-		{ 0.4f,  0.7f, 0.0f}, // 右上
+		{-0.4f, -0.7f, 0.0f}, // 左下 0
+		{-0.4f,  0.7f, 0.0f}, // 左上 1
+		{ 0.4f, -0.7f, 0.0f}, // 右下 2
+		{ 0.4f,  0.7f, 0.0f}, // 右上 3
 	};
-
 	// 頂点バッファの作成
 	D3D12_HEAP_PROPERTIES heapprop = {};
 	heapprop.Type = D3D12_HEAP_TYPE_UPLOAD;
 	heapprop.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	heapprop.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
 	D3D12_RESOURCE_DESC resdesc = {};
 	resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	resdesc.Width = sizeof(vertices); //頂点情報が入るだけのサイズ
@@ -257,7 +255,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	resdesc.SampleDesc.Count = 1;
 	resdesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 	resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
 	ID3D12Resource* vertBuff = nullptr;
 	result = _dev->CreateCommittedResource(
 		&heapprop,
@@ -270,7 +267,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DebugOutputFormatString("Missed at Creating CommittedResource.");
 		return 0;
 	}
-
 	// 頂点情報のコピー
 	XMFLOAT3* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
@@ -278,15 +274,42 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DebugOutputFormatString("Missed at Mapping Vertex.");
 		return 0;
 	}
-
 	std::copy(std::begin(vertices), std::end(vertices), vertMap);
 	vertBuff->Unmap(0, nullptr); // verMap の情報を渡したので、マップを解除する
-
 	// 頂点バッファビューの作成
 	D3D12_VERTEX_BUFFER_VIEW vbView = {};
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress(); // バッファの仮想アドレス
 	vbView.SizeInBytes = sizeof(vertices); //全バイト数
 	vbView.StrideInBytes = sizeof(vertices[0]); //１頂点当たりのバイト数
+
+
+	// インデックス情報作成
+	unsigned short indices[] = {
+		0, 1, 2,
+		2, 1, 3
+	};
+	// インデックスバッファの作成
+	ID3D12Resource* idxBuff = nullptr;
+	resdesc.Width = sizeof(indices);
+	result = _dev->CreateCommittedResource(
+		&heapprop,
+		D3D12_HEAP_FLAG_NONE,
+		&resdesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&idxBuff) );
+	// バッファにコピー
+	unsigned short* mappedIdx = nullptr;
+	idxBuff->Map(0, nullptr, (void**)&mappedIdx);
+	std::copy(std::begin(indices), std::end(indices), mappedIdx);
+	idxBuff->Unmap(0, nullptr);
+	// インデックスバッファビューを作成
+	D3D12_INDEX_BUFFER_VIEW ibView = {};
+	ibView.BufferLocation = idxBuff->GetGPUVirtualAddress();
+	ibView.Format = DXGI_FORMAT_R16_UINT;
+	ibView.SizeInBytes = sizeof(indices);
+
+
 
 	// シェーダーの読み込みと生成
 	ID3DBlob* _vsBlob = nullptr;
@@ -484,9 +507,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			_cmdList->SetGraphicsRootSignature(rootSignature);
 			_cmdList->RSSetViewports(1, &viewport);
 			_cmdList->RSSetScissorRects(1, &scissorrect);
-			_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			_cmdList->IASetVertexBuffers(0, 1, &vbView);
-			_cmdList->DrawInstanced(4, 1, 0, 0);
+			_cmdList->IASetIndexBuffer(&ibView);
+			_cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 			// 4.レンダーターゲットをクローズ
 			_cmdList->Close();
