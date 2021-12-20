@@ -205,7 +205,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	heapDesc.NodeMask = 0;
 	heapDesc.NumDescriptors = 2; //表裏の２つ
 	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	
+
 	ID3D12DescriptorHeap* rtvHeaps = nullptr;
 	result = _dev->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeaps)); //この段階ではまだ RTV ではない
 	if (result != S_OK) {
@@ -224,8 +224,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		// 先ほど作成したディスクリプタヒープを RTV として設定する
 		_dev->CreateRenderTargetView(
-			_backBuffers[idx], 
-			nullptr, 
+			_backBuffers[idx],
+			nullptr,
 			handle);
 		// ハンドルを一つずらす
 		handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -293,14 +293,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ID3DBlob* errorBlob = nullptr;
 
 	result = D3DCompileFromFile(
-		L"BasicVertexShader.hlsl", 
+		L"BasicVertexShader.hlsl",
 		nullptr,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		"BasicVS",
 		"vs_5_0",
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
-		0, 
-		&_vsBlob, 
+		0,
+		&_vsBlob,
 		&errorBlob);
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Compiling Vertex Shader.");
@@ -423,6 +423,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 
+	// ビューポートとシザー矩形
+	D3D12_VIEWPORT viewport = {};
+	viewport.Width = window_width;
+	viewport.Height = window_height;
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	viewport.MaxDepth = 1.0f;
+	viewport.MinDepth = 0.0f;
+
+	D3D12_RECT scissorrect = {}; //今回は特に一部を切り抜いたりしない
+	scissorrect.top = 0;
+	scissorrect.left = 0;
+	scissorrect.right = scissorrect.left + window_width;
+	scissorrect.bottom = scissorrect.top + window_height;
+
 
 	MSG msg = {};
 	
@@ -436,6 +451,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				DebugOutputFormatString("Missed at Reset Allocator.");
 				return 0;
 			}*/
+			result = _cmdList->Reset(_cmdAllocator, nullptr);
+			/*if (result != S_OK) {
+				DebugOutputFormatString("Missed at Reset Command List.");
+				return 0;
+			}*/
+
+			// 描画命令
+			_cmdList->SetPipelineState(_pipelinestate);
+			_cmdList->SetGraphicsRootSignature(rootSignature);
+			_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			_cmdList->IASetVertexBuffers(0, 1, &vbView);
+			_cmdList->DrawInstanced(3, 1, 0, 0);
 
 			// 2.レンダーターゲットをバックバッファにセット
 			// 現在のバックバッファを取得
@@ -506,6 +533,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				DebugOutputFormatString("Missed at Present Swapchain.");
 				return 0;
 			}
+
 
 		}
 
