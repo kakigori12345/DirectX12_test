@@ -234,15 +234,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// ポリゴンの表示
 	// 頂点情報作成
-	//XMFLOAT3 vertices[] = {
-	//	{-1.0f, -1.0f, 0.0f}, // 左下
-	//	{-1.0f,  1.0f, 0.0f}, // 左上
-	//	{ 1.0f, -1.0f, 0.0f}, // 右下
-	//};
 	XMFLOAT3 vertices[] = {
-		{-0.5f, -0.7f, 0.0f}, // 左下
-		{ 0.0f,  0.7f, 0.0f}, // 左上
-		{ 0.5f, -0.7f, 0.0f}, // 右下
+		{-0.4f, -0.7f, 0.0f}, // 左下
+		{-0.4f,  0.7f, 0.0f}, // 左上
+		{ 0.4f, -0.7f, 0.0f}, // 右下
+		{ 0.4f,  0.7f, 0.0f}, // 右上
 	};
 
 	// 頂点バッファの作成
@@ -488,9 +484,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			_cmdList->SetGraphicsRootSignature(rootSignature);
 			_cmdList->RSSetViewports(1, &viewport);
 			_cmdList->RSSetScissorRects(1, &scissorrect);
-			_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			_cmdList->IASetVertexBuffers(0, 1, &vbView);
-			_cmdList->DrawInstanced(3, 1, 0, 0);
+			_cmdList->DrawInstanced(4, 1, 0, 0);
 
 			// 4.レンダーターゲットをクローズ
 			_cmdList->Close();
