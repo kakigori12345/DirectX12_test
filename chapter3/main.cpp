@@ -457,13 +457,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				return 0;
 			}*/
 
-			// 描画命令
-			_cmdList->SetPipelineState(_pipelinestate);
-			_cmdList->SetGraphicsRootSignature(rootSignature);
-			_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			_cmdList->IASetVertexBuffers(0, 1, &vbView);
-			_cmdList->DrawInstanced(3, 1, 0, 0);
-
 			// 2.レンダーターゲットをバックバッファにセット
 			// 現在のバックバッファを取得
 			UINT bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
@@ -484,6 +477,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// 3.レンダーターゲットを指定色でクリア
 			float clearColor[] = { 1.0f, 1.0f, 0.0f, 1.0f }; //黄色
 			_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
+
+			// 描画命令
+			_cmdList->SetPipelineState(_pipelinestate);
+			_cmdList->SetGraphicsRootSignature(rootSignature);
+			_cmdList->RSSetViewports(1, &viewport);
+			_cmdList->RSSetScissorRects(1, &scissorrect);
+			_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			_cmdList->IASetVertexBuffers(0, 1, &vbView);
+			_cmdList->DrawInstanced(3, 1, 0, 0);
 
 			// 4.レンダーターゲットをクローズ
 			_cmdList->Close();
