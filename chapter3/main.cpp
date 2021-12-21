@@ -34,6 +34,11 @@ namespace {
 		XMFLOAT2 uv;	// uv 座標
 	};
 
+	// テクスチャデータ
+	struct TexRGBA {
+		unsigned char R, G, B, A;
+	};
+
 
 
 	// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
@@ -315,6 +320,47 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 	ibView.SizeInBytes = sizeof(indices);
 
+
+	// テクスチャデータ作成（256*256）
+	std::vector<TexRGBA> texturedata(256 * 256);
+	for (auto& rgba : texturedata) {
+		rgba.R = rand() & 256;
+		rgba.G = rand() & 256;
+		rgba.B = rand() & 256;
+		rgba.A = 255;	// αは1.0
+	}
+	// テクスチャバッファの作成
+	D3D12_HEAP_PROPERTIES heappropTex = {};
+	heappropTex.Type = D3D12_HEAP_TYPE_CUSTOM;	//特殊な設定なので DEFAULT でも UPLOAD でもない
+	heappropTex.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;	//ライトバック
+	heappropTex.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;	//転送はL0,つまりCPU側から直接行う
+	heappropTex.CreationNodeMask = 0;	//単一アダプターなので 0
+	heappropTex.VisibleNodeMask = 0;
+	// リソース設定
+	D3D12_RESOURCE_DESC resDescTex = {};
+	resDescTex.Format = DXGI_FORMAT_R8G8B8A8_UNORM;	// RGBAフォーマット
+	resDescTex.Width = 256;
+	resDescTex.Height = 256;
+	resDescTex.DepthOrArraySize = 1;	//2Dでも配列でもないので1
+	resDescTex.SampleDesc.Count = 1;	//通常テクスチャなのでアンチエイリアシングしない
+	resDescTex.SampleDesc.Quality = 0;	//クオリティは最低
+	resDescTex.MipLevels = 1;			//ミップマップしない
+	resDescTex.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;	//2Dテクスチャ用
+	resDescTex.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;	//レイアウトは決定しない
+	resDescTex.Flags = D3D12_RESOURCE_FLAG_NONE;	//特にフラグなし
+	// リソースの生成
+	ID3D12Resource* texbuff = nullptr;
+	result = _dev->CreateCommittedResource(
+		&heappropTex,
+		D3D12_HEAP_FLAG_NONE,
+		&resDescTex,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, //テクスチャ用指定
+		nullptr,
+		IID_PPV_ARGS(&texbuff));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating Texture Resource.");
+		return 0;
+	}
 
 
 	// シェーダーの読み込みと生成
