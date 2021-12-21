@@ -28,6 +28,12 @@ namespace {
 	int window_width = 800;
 	int window_height = 640;
 
+	// 頂点情報
+	struct Vertex {
+		XMFLOAT3 pos;	// xyz 座標
+		XMFLOAT2 uv;	// uv 座標
+	};
+
 
 
 	// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
@@ -234,11 +240,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// ポリゴンの表示
 	// 頂点情報作成
-	XMFLOAT3 vertices[] = {
-		{-0.4f, -0.7f, 0.0f}, // 左下 0
-		{-0.4f,  0.7f, 0.0f}, // 左上 1
-		{ 0.4f, -0.7f, 0.0f}, // 右下 2
-		{ 0.4f,  0.7f, 0.0f}, // 右上 3
+	Vertex vertices[] = {
+		{{-0.4f, -0.7f, 0.0f}, {0.0f, 1.0f}},	// 左下
+		{{-0.4f,  0.7f, 0.0f}, {0.0f, 0.0f}},	// 左上
+		{{ 0.4f, -0.7f, 0.0f}, {1.0f, 1.0f}},	// 右下
+		{{ 0.4f,  0.7f, 0.0f}, {1.0f, 0.0f}},	// 右上
 	};
 	// 頂点バッファの作成
 	D3D12_HEAP_PROPERTIES heapprop = {};
@@ -268,7 +274,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		return 0;
 	}
 	// 頂点情報のコピー
-	XMFLOAT3* vertMap = nullptr;
+	Vertex* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Mapping Vertex.");
@@ -357,7 +363,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// 頂点レイアウト
 	D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
-		{
+		{	// 座標
 			"POSITION",		// セマンティクス名
 			0,				// 同じセマンティクス名の時に使うインデックス
 			DXGI_FORMAT_R32G32B32_FLOAT,	// フォーマット（要素数とビット数で型を表す）
@@ -365,6 +371,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			D3D12_APPEND_ALIGNED_ELEMENT,	// データのオフセット位置
 			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,	// 
 			0				// 一度に描画するインスタンスの数
+		},
+		{	// uv
+			"TEXCOORD",
+			0,
+			DXGI_FORMAT_R32G32_FLOAT,
+			0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
 		},
 	};
 
