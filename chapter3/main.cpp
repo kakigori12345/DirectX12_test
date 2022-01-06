@@ -361,6 +361,42 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DebugOutputFormatString("Missed at Creating Texture Resource.");
 		return 0;
 	}
+	// データ転送
+	result = texbuff->WriteToSubresource(
+		0,			// サブリソースインデックス
+		nullptr,	// 書き込み領域の指定（今回は先頭から全領域）
+		texturedata.data(),		// 書き込みたいデータのアドレス
+		sizeof(TexRGBA) * 256,	// １行あたりのデータサイズ
+		sizeof(TexRGBA) * texturedata.size()	// スライスあたりのデータサイズ（今回は全サイズ）
+	);
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Writing to Subresource.");
+		return 0;
+	}
+	// シェーダーリソースビュー
+	ID3D12DescriptorHeap* texDescHeap = nullptr;
+	D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc = {};
+	descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;	//シェーダーから見えるように
+	descHeapDesc.NodeMask = 0;		// アダプタは一つなので0をセット
+	descHeapDesc.NumDescriptors = 1;// ディスクリプタヒープの数は一つ
+	descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;	//シェーダーリソースビュー用
+	result = _dev->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&texDescHeap));
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating Descriptor Heap For ShaderReosurceView.");
+		return 0;
+	}
+	// シェーダーリソースビューを作る
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;	// RGBA(0.0f~1.0fに正規化)
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;	// 2Dテクスチャ
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Texture2D.MipLevels = 1;	// ミニマップは使用しないので1
+	_dev->CreateShaderResourceView(
+		texbuff,	// ビューと関連付けるバッファ
+		&srvDesc,	// テクスチャ設定情報
+		texDescHeap->GetCPUDescriptorHandleForHeapStart()	// ヒープのどこに割り当てるか
+		 // もしテクスチャビューが複数あるなら、ここは取得したハンドルからのオフセットを指定する必要がある
+	);
 
 
 	// シェーダーの読み込みと生成
