@@ -576,17 +576,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 
-	// 描画時の設定
-	// ルートシグネチャの指定
-	_cmdList->SetGraphicsRootSignature(rootSignature);
-	// ディスクリプタヒープの指定
-	_cmdList->SetDescriptorHeaps(1, &texDescHeap);
-	// ルートパラメータとディスクリプタヒープの関連付け
-	_cmdList->SetGraphicsRootDescriptorTable(
-		0,	//ルートパラメータインデックス
-		texDescHeap->GetGPUDescriptorHandleForHeapStart());	//ヒープアドレス
-
-
 	// ビューポートとシザー矩形
 	D3D12_VIEWPORT viewport = {};
 	viewport.Width = window_width;
@@ -608,6 +597,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	while (true) {
 		// メインループの処理
 		{
+			// 描画時の設定
+			// ルートシグネチャの指定
+			_cmdList->SetGraphicsRootSignature(rootSignature);
+			// ディスクリプタヒープの指定
+			_cmdList->SetDescriptorHeaps(1, &texDescHeap);
+			// ルートパラメータとディスクリプタヒープの関連付け
+			_cmdList->SetGraphicsRootDescriptorTable(
+				0,	//ルートパラメータインデックス
+				texDescHeap->GetGPUDescriptorHandleForHeapStart());	//ヒープアドレス
+
 			// 1.コマンドアロケータとコマンドリストをクリア
 			result = _cmdAllocator->Reset();
 			// ここで判定するとなぜか E_FAIL が帰ってくる
