@@ -324,9 +324,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// テクスチャデータ作成（256*256）
 	std::vector<TexRGBA> texturedata(256 * 256);
 	for (auto& rgba : texturedata) {
-		rgba.R = rand() & 256;
-		rgba.G = rand() & 256;
-		rgba.B = rand() & 256;
+		rgba.R = rand() % 256;
+		rgba.G = rand() % 256;
+		rgba.B = rand() % 256;
 		rgba.A = 255;	// αは1.0
 	}
 	// テクスチャバッファの作成
@@ -505,9 +505,41 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	gpipeline.SampleDesc.Quality = 0;	//クオリティは最低
 
 
+	// ディスクリプタテーブルレンジの作成
+	D3D12_DESCRIPTOR_RANGE descTblRange = {};
+	descTblRange.NumDescriptors = 1;	
+	descTblRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;	//種別はテクスチャ
+	descTblRange.BaseShaderRegister = 0;
+	descTblRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	// ルートパラメータの作成
+	D3D12_ROOT_PARAMETER rootparam = {};
+	rootparam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootparam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	rootparam.DescriptorTable.pDescriptorRanges = &descTblRange;
+	rootparam.DescriptorTable.NumDescriptorRanges = 1;
+
+	// サンプラーの作成
+	D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;	//横方向の繰り返し
+	samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;	//縦方向の繰り返し
+	samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;	//奥行の繰り返し
+	samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;	//ボーダーは黒
+	//samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;	//線形補間
+	samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;	//補間しない
+	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;	//ミップマップ最大値
+	samplerDesc.MinLOD = 0.0f;				//ミップマップ最小値
+	samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;	//ピクセルシェーダーから見える
+	samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;	//リサンプリングしない
+
+
 	// ルートシグネチャの作成
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
 	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	rootSignatureDesc.pParameters = &rootparam;	//ルートパラメータの先頭アドレス
+	rootSignatureDesc.NumParameters = 1;		//ルートパラメータの数
+	rootSignatureDesc.pStaticSamplers = &samplerDesc;
+	rootSignatureDesc.NumStaticSamplers = 1;
 
 	ID3DBlob* rootSigBlob = nullptr;
 	result = D3D12SerializeRootSignature(
@@ -542,6 +574,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DebugOutputFormatString("Missed at Creating Graphics Pipeline State.");
 		return 0;
 	}
+
+
+	// 描画時の設定
+	// ルートシグネチャの指定
+	_cmdList->SetGraphicsRootSignature(rootSignature);
+	// ディスクリプタヒープの指定
+	_cmdList->SetDescriptorHeaps(1, &texDescHeap);
+	// ルートパラメータとディスクリプタヒープの関連付け
+	_cmdList->SetGraphicsRootDescriptorTable(
+		0,	//ルートパラメータインデックス
+		texDescHeap->GetGPUDescriptorHandleForHeapStart());	//ヒープアドレス
 
 
 	// ビューポートとシザー矩形
