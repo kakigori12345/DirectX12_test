@@ -257,10 +257,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ポリゴンの表示
 	// 頂点情報作成
 	Vertex vertices[] = {
-		{{   0.0f, 100.0f, 0.0f}, {0.0f, 1.0f}},	// 左下
-		{{   0.0f,   0.0f, 0.0f}, {0.0f, 0.0f}},	// 左上
-		{{ 100.0f, 100.0f, 0.0f}, {1.0f, 1.0f}},	// 右下
-		{{ 100.0f,   0.0f, 0.0f}, {1.0f, 0.0f}},	// 右上
+		{{-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},	// 左下
+		{{-1.0f,  1.0f, 0.0f}, {0.0f, 0.0f}},	// 左上
+		{{ 1.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},	// 右下
+		{{ 1.0f,  1.0f, 0.0f}, {1.0f, 0.0f}},	// 右上
 	};
 	// 頂点バッファの作成
 	D3D12_HEAP_PROPERTIES heapprop = {};
@@ -438,6 +438,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	matrix.r[1].m128_f32[1] = -2.0f / window_height;
 	matrix.r[3].m128_f32[0] = -1.0f;
 	matrix.r[3].m128_f32[1] = 1.0f;
+
+	// ワールド行列
+	float angleY = XM_PIDIV4;
+	XMMATRIX worldMat = XMMatrixRotationY(angleY);
+	// ビュー行列
+	XMFLOAT3 eye(0, 0, -5);
+	XMFLOAT3 target(0, 0, 0);
+	XMFLOAT3 up(0, 1, 0);
+	XMMATRIX viewMat = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+	// プロジェクション行列
+	XMMATRIX projMat = XMMatrixPerspectiveFovLH(
+		XM_PIDIV2,	//画角は90度
+		static_cast<float>(window_width) / static_cast<float>(window_height),	// アスペクト比
+		1.0f,	// ニアクリップ
+		10.0f	// ファークリップ
+	);
+
 
 	// 定数バッファーの作成
 	D3D12_HEAP_PROPERTIES constBufferHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
@@ -696,6 +713,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			heapHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			// 定数用
 			_cmdList->SetGraphicsRootDescriptorTable(1, heapHandle);
+		}
+
+		{ // 行列計算
+			angleY += 0.1f;
+			worldMat = XMMatrixRotationY(angleY);
+			*mapMatrix = worldMat * viewMat * projMat;
 		}
 
 		// 1.コマンドアロケータとコマンドリストをクリア
