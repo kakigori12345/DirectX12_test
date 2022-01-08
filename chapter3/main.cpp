@@ -257,10 +257,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ポリゴンの表示
 	// 頂点情報作成
 	Vertex vertices[] = {
-		{{-0.4f, -0.7f, 0.0f}, {0.0f, 1.0f}},	// 左下
-		{{-0.4f,  0.7f, 0.0f}, {0.0f, 0.0f}},	// 左上
-		{{ 0.4f, -0.7f, 0.0f}, {1.0f, 1.0f}},	// 右下
-		{{ 0.4f,  0.7f, 0.0f}, {1.0f, 0.0f}},	// 右上
+		{{   0.0f, 100.0f, 0.0f}, {0.0f, 1.0f}},	// 左下
+		{{   0.0f,   0.0f, 0.0f}, {0.0f, 0.0f}},	// 左上
+		{{ 100.0f, 100.0f, 0.0f}, {1.0f, 1.0f}},	// 右下
+		{{ 100.0f,   0.0f, 0.0f}, {1.0f, 0.0f}},	// 右上
 	};
 	// 頂点バッファの作成
 	D3D12_HEAP_PROPERTIES heapprop = {};
@@ -434,6 +434,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// GPU に転送する定数を作成
 	XMMATRIX matrix = XMMatrixIdentity();
+	matrix.r[0].m128_f32[0] = 2.0f / window_width;
+	matrix.r[1].m128_f32[1] = -2.0f / window_height;
+	matrix.r[3].m128_f32[0] = -1.0f;
+	matrix.r[3].m128_f32[1] = 1.0f;
+
 	// 定数バッファーの作成
 	D3D12_HEAP_PROPERTIES constBufferHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	D3D12_RESOURCE_DESC constBufferDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(matrix) + 0xff) & ~0xff);
