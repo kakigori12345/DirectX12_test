@@ -401,14 +401,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DebugOutputFormatString("Missed at Writing to Subresource.");
 		return 0;
 	}
+
 	// シェーダーリソースビュー
-	ID3D12DescriptorHeap* texDescHeap = nullptr;
+	ID3D12DescriptorHeap* basicDescHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc = {};
 	descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;	//シェーダーから見えるように
 	descHeapDesc.NodeMask = 0;		// アダプタは一つなので0をセット
-	descHeapDesc.NumDescriptors = 1;// ディスクリプタヒープの数は一つ
+	descHeapDesc.NumDescriptors = 2;// SRV と CBV
 	descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;	//シェーダーリソースビュー用
-	result = _dev->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&texDescHeap));
+	result = _dev->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&basicDescHeap));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating Descriptor Heap For ShaderReosurceView.");
 		return 0;
@@ -422,9 +423,48 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	_dev->CreateShaderResourceView(
 		texbuff,	// ビューと関連付けるバッファ
 		&srvDesc,	// テクスチャ設定情報
-		texDescHeap->GetCPUDescriptorHandleForHeapStart()	// ヒープのどこに割り当てるか
+		basicDescHeap->GetCPUDescriptorHandleForHeapStart()	// ヒープのどこに割り当てるか
 		 // もしテクスチャビューが複数あるなら、ここは取得したハンドルからのオフセットを指定する必要がある
 	);
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating Shader Resource View.");
+		return 0;
+	}
+
+
+	// GPU に転送する定数を作成
+	XMMATRIX matrix = XMMatrixIdentity();
+	// 定数バッファーの作成
+	D3D12_HEAP_PROPERTIES constBufferHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	D3D12_RESOURCE_DESC constBufferDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(matrix) + 0xff) & ~0xff);
+	ID3D12Resource* constBuff = nullptr;
+	_dev->CreateCommittedResource(
+		&constBufferHeap,
+		D3D12_HEAP_FLAG_NONE,
+		&constBufferDesc,	// 0xffアライメント
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&constBuff)
+	);
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating Const Buffer.");
+		return 0;
+	}
+	// マップで定数コピー
+	XMMATRIX* mapMatrix;	//マップ先
+	result = constBuff->Map(0, nullptr, (void**)&mapMatrix);
+	*mapMatrix = matrix;	//行列の内容をコピー
+
+	// 定数バッファービューを作成する
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+	cbvDesc.BufferLocation = constBuff->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = constBuff->GetDesc().Width;
+	// ディスクリプタヒープ上でのメモリ位置（ハンドル）を取得
+	auto basicHeapHandle = basicDescHeap->GetCPUDescriptorHandleForHeapStart(); //この状態だとシェーダリソースビューの位置を示す
+	// インクリメントして定数バッファービューの位置を示すように
+	basicHeapHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	// 実際に定数バッファービューを作成
+	_dev->CreateConstantBufferView(&cbvDesc, basicHeapHandle);
 
 
 	// シェーダーの読み込みと生成
@@ -534,18 +574,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// ディスクリプタテーブルレンジの作成
-	D3D12_DESCRIPTOR_RANGE descTblRange = {};
-	descTblRange.NumDescriptors = 1;	
-	descTblRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;	//種別はテクスチャ
-	descTblRange.BaseShaderRegister = 0;
-	descTblRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+	D3D12_DESCRIPTOR_RANGE descTblRange[2] = {};	//テクスチャと定数で２つ
+	// テクスチャ用レジスター 0 番
+	descTblRange[0].NumDescriptors = 1;	
+	descTblRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;	//種別はテクスチャ
+	descTblRange[0].BaseShaderRegister = 0;
+	descTblRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+	// 定数用レジスター 0番
+	descTblRange[1].NumDescriptors = 1;
+	descTblRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;	//種別は定数
+	descTblRange[1].BaseShaderRegister = 0;
+	descTblRange[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
 
 	// ルートパラメータの作成
-	D3D12_ROOT_PARAMETER rootparam = {};
-	rootparam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	rootparam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-	rootparam.DescriptorTable.pDescriptorRanges = &descTblRange;
-	rootparam.DescriptorTable.NumDescriptorRanges = 1;
+	// テクスチャ用
+	D3D12_ROOT_PARAMETER rootparam[2] = {};
+	rootparam[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootparam[0].DescriptorTable.pDescriptorRanges = &descTblRange[0];
+	rootparam[0].DescriptorTable.NumDescriptorRanges = 1;
+	rootparam[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;	//ピクセルシェーダーから見える
+	// 定数用
+	rootparam[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootparam[1].DescriptorTable.pDescriptorRanges = &descTblRange[1];
+	rootparam[1].DescriptorTable.NumDescriptorRanges = 1;
+	rootparam[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;	//頂点シェーダーから見える
+
 
 	// サンプラーの作成
 	D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
@@ -564,8 +618,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ルートシグネチャの作成
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
 	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-	rootSignatureDesc.pParameters = &rootparam;	//ルートパラメータの先頭アドレス
-	rootSignatureDesc.NumParameters = 1;		//ルートパラメータの数
+	rootSignatureDesc.pParameters = rootparam;	//ルートパラメータの先頭アドレス
+	rootSignatureDesc.NumParameters = 2;		//ルートパラメータの数
 	rootSignatureDesc.pStaticSamplers = &samplerDesc;
 	rootSignatureDesc.NumStaticSamplers = 1;
 
@@ -623,117 +677,120 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	MSG msg = {};
 	
 	while (true) {
-		// メインループの処理
-		{
-			// 描画時の設定
+		{// 描画時の設定
 			// ルートシグネチャの指定
 			_cmdList->SetGraphicsRootSignature(rootSignature);
+
 			// ディスクリプタヒープの指定
-			_cmdList->SetDescriptorHeaps(1, &texDescHeap);
+			_cmdList->SetDescriptorHeaps(1, &basicDescHeap);
+
 			// ルートパラメータとディスクリプタヒープの関連付け
-			_cmdList->SetGraphicsRootDescriptorTable(
-				0,	//ルートパラメータインデックス
-				texDescHeap->GetGPUDescriptorHandleForHeapStart());	//ヒープアドレス
-
-			// 1.コマンドアロケータとコマンドリストをクリア
-			result = _cmdAllocator->Reset();
-			// ここで判定するとなぜか E_FAIL が帰ってくる
-			/*if (result != S_OK) {
-				DebugOutputFormatString("Missed at Reset Allocator.");
-				return 0;
-			}*/
-			result = _cmdList->Reset(_cmdAllocator, nullptr);
-			/*if (result != S_OK) {
-				DebugOutputFormatString("Missed at Reset Command List.");
-				return 0;
-			}*/
-
-			// 2.レンダーターゲットをバックバッファにセット
-			// 現在のバックバッファを取得
-			UINT bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
-			auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
-			rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			// リソースバリアでバッファの使い道を GPU に通知する
-			D3D12_RESOURCE_BARRIER BarrierDesc = {};
-			//BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION; //遷移
-			//BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			//BarrierDesc.Transition.pResource = _backBuffers[bbIdx];
-			//BarrierDesc.Transition.Subresource = 0;
-			//BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-			//BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-			// 上のリソースバリアの設定は下の１行で済む
-			BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
-				_backBuffers[bbIdx], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
-			);
-			_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
-			// レンダーターゲットとして指定する
-			_cmdList->OMSetRenderTargets(1, &rtvH, true, nullptr);
-
-			// 3.レンダーターゲットを指定色でクリア
-			float clearColor[] = { 1.0f, 1.0f, 0.0f, 1.0f }; //黄色
-			_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
-
-			// 描画命令
-			_cmdList->SetPipelineState(_pipelinestate);
-			_cmdList->SetGraphicsRootSignature(rootSignature);
-			_cmdList->RSSetViewports(1, &viewport);
-			_cmdList->RSSetScissorRects(1, &scissorrect);
-			_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			_cmdList->IASetVertexBuffers(0, 1, &vbView);
-			_cmdList->IASetIndexBuffer(&ibView);
-			_cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-
-			// 4.レンダーターゲットをクローズ
-			_cmdList->Close();
-
-			// 5.たまったコマンドをコマンドリストに投げる
-			// コマンドリスト実行
-			ID3D12CommandList* cmdLists[] = { _cmdList };
-			_cmdQueue->ExecuteCommandLists(1, cmdLists);
-			// フェンスを作成しておく
-			ID3D12Fence* _fence = nullptr;
-			UINT64 _fenceVal = 0;
-			result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&_fence));
-			// GPUの処理が完了するまで待つ
-			_cmdQueue->Signal(_fence, ++_fenceVal);
-			if (_fence->GetCompletedValue() != _fenceVal) {
-				// イベントハンドルを取得
-				auto event = CreateEvent(nullptr, false, false, nullptr);
-
-				_fence->SetEventOnCompletion(_fenceVal, event);
-
-				// イベントが発生するまで待機
-				WaitForSingleObject(event, INFINITE);
-
-				// イベントハンドルを閉じる
-				CloseHandle(event);
-			}
-			while (_fence->GetCompletedValue() != _fenceVal) { ; }
-			// クリア
-			result = _cmdAllocator->Reset();
-			if (result != S_OK) {
-				DebugOutputFormatString("Missed at Reset Allocator.");
-				return 0;
-			}
-			result = _cmdList->Reset(_cmdAllocator, nullptr);
-			if (result != S_OK) {
-				DebugOutputFormatString("Missed at Reset CommandList.");
-				return 0;
-			}
-
-			// 6.スワップチェーンのフリップ処理
-			// 状態遷移
-			BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-			BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-
-			result = _swapchain->Present(1, 0);
-			if (result != S_OK) {
-				DebugOutputFormatString("Missed at Present Swapchain.");
-				return 0;
-			}
-
-
+			auto heapHandle = basicDescHeap->GetGPUDescriptorHandleForHeapStart();
+			// テクスチャ用
+			_cmdList->SetGraphicsRootDescriptorTable(0, heapHandle);
+			heapHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			// 定数用
+			_cmdList->SetGraphicsRootDescriptorTable(1, heapHandle);
 		}
+
+		// 1.コマンドアロケータとコマンドリストをクリア
+		result = _cmdAllocator->Reset();
+		// ここで判定するとなぜか E_FAIL が帰ってくる
+		/*if (result != S_OK) {
+			DebugOutputFormatString("Missed at Reset Allocator.");
+			return 0;
+		}*/
+		result = _cmdList->Reset(_cmdAllocator, nullptr);
+		/*if (result != S_OK) {
+			DebugOutputFormatString("Missed at Reset Command List.");
+			return 0;
+		}*/
+
+		// 2.レンダーターゲットをバックバッファにセット
+		// 現在のバックバッファを取得
+		UINT bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
+		auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
+		rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		// リソースバリアでバッファの使い道を GPU に通知する
+		D3D12_RESOURCE_BARRIER BarrierDesc = {};
+		//BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION; //遷移
+		//BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		//BarrierDesc.Transition.pResource = _backBuffers[bbIdx];
+		//BarrierDesc.Transition.Subresource = 0;
+		//BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+		//BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		// 上のリソースバリアの設定は下の１行で済む
+		BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
+			_backBuffers[bbIdx], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
+		);
+		_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
+		// レンダーターゲットとして指定する
+		_cmdList->OMSetRenderTargets(1, &rtvH, true, nullptr);
+
+		// 3.レンダーターゲットを指定色でクリア
+		float clearColor[] = { 1.0f, 1.0f, 0.0f, 1.0f }; //黄色
+		_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
+
+		// 描画命令
+		_cmdList->SetPipelineState(_pipelinestate);
+		_cmdList->SetGraphicsRootSignature(rootSignature);
+		_cmdList->RSSetViewports(1, &viewport);
+		_cmdList->RSSetScissorRects(1, &scissorrect);
+		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		_cmdList->IASetVertexBuffers(0, 1, &vbView);
+		_cmdList->IASetIndexBuffer(&ibView);
+		_cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+		// 4.レンダーターゲットをクローズ
+		_cmdList->Close();
+
+		// 5.たまったコマンドをコマンドリストに投げる
+		// コマンドリスト実行
+		ID3D12CommandList* cmdLists[] = { _cmdList };
+		_cmdQueue->ExecuteCommandLists(1, cmdLists);
+		// フェンスを作成しておく
+		ID3D12Fence* _fence = nullptr;
+		UINT64 _fenceVal = 0;
+		result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&_fence));
+		// GPUの処理が完了するまで待つ
+		_cmdQueue->Signal(_fence, ++_fenceVal);
+		if (_fence->GetCompletedValue() != _fenceVal) {
+			// イベントハンドルを取得
+			auto event = CreateEvent(nullptr, false, false, nullptr);
+
+			_fence->SetEventOnCompletion(_fenceVal, event);
+
+			// イベントが発生するまで待機
+			WaitForSingleObject(event, INFINITE);
+
+			// イベントハンドルを閉じる
+			CloseHandle(event);
+		}
+		while (_fence->GetCompletedValue() != _fenceVal) { ; }
+		// クリア
+		result = _cmdAllocator->Reset();
+		if (result != S_OK) {
+			DebugOutputFormatString("Missed at Reset Allocator.");
+			return 0;
+		}
+		result = _cmdList->Reset(_cmdAllocator, nullptr);
+		if (result != S_OK) {
+			DebugOutputFormatString("Missed at Reset CommandList.");
+			return 0;
+		}
+
+		// 6.スワップチェーンのフリップ処理
+		// 状態遷移
+		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+
+		result = _swapchain->Present(1, 0);
+		if (result != S_OK) {
+			DebugOutputFormatString("Missed at Present Swapchain.");
+			return 0;
+		}
+
+
 
 		// メッセージ処理
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
