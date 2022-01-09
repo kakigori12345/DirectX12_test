@@ -46,6 +46,23 @@ namespace {
 		unsigned char R, G, B, A;
 	};
 
+	// PMD ヘッダ構造体
+	struct PMDHeader {
+		float version;
+		char modelName[20];
+		char comment[256];
+	};
+
+	// PMD 頂点構造体
+	struct PMDVertex {
+		XMFLOAT3 pos;				// 頂点情報(12)
+		XMFLOAT3 normal;			// 法線ベクトル(12)
+		XMFLOAT2 uv;				// uv 座標(8)
+		unsigned short boneNo[2];	// ボーン番号(4)
+		unsigned char boneWeigth;	// ボーン影響度(1)
+		unsigned char edgeFlag;		// 輪郭線フラグ(1)
+	};
+	constexpr size_t pmdVertexSize = 38;	// 頂点一つ当たりのサイズ
 
 
 	// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
@@ -254,39 +271,38 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 
-	// ポリゴンの表示
-	// 頂点情報作成
-	Vertex vertices[] = {
-		{{-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},	// 左下
-		{{-1.0f,  1.0f, 0.0f}, {0.0f, 0.0f}},	// 左上
-		{{ 1.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},	// 右下
-		{{ 1.0f,  1.0f, 0.0f}, {1.0f, 0.0f}},	// 右上
-	};
+	// PMD の読み込み
+
+	// ヘッダ
+	char signature[3] = {};		//シグネチャ
+	PMDHeader pmdheader = {};	//PMD ヘッダ
+	FILE* fp;
+	errno_t error = fopen_s(&fp, "data/Model/初音ミク.pmd", "rb");
+	if (error != 0) {
+		// 詳細なエラー表示
+		DebugOutputFormatString("Missed at Reading PMD File");
+		return 0;
+	}
+	fread(signature, sizeof(signature), 1, fp);
+	fread(&pmdheader, sizeof(pmdheader), 1, fp);
+
+	// 頂点
+	unsigned int vertNum;
+	fread(&vertNum, sizeof(vertNum), 1, fp);
+	std::vector<unsigned char> vertices(vertNum * pmdVertexSize);
+	fread(vertices.data(), vertices.size(), 1, fp);
+
+	fclose(fp);
 	// 頂点バッファの作成
 	D3D12_HEAP_PROPERTIES heapprop = {};
-	/*heapprop.Type = D3D12_HEAP_TYPE_UPLOAD;
-	heapprop.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	heapprop.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;*/
 	D3D12_RESOURCE_DESC resdesc = {};
-	//resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	//resdesc.Width = sizeof(vertices); //頂点情報が入るだけのサイズ
-	//resdesc.Height = 1;
-	//resdesc.DepthOrArraySize = 1;
-	//resdesc.MipLevels = 1;
-	//resdesc.Format = DXGI_FORMAT_UNKNOWN;
-	//resdesc.SampleDesc.Count = 1;
-	//resdesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-	//resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	// 上で行っている処理は下の２行で書き換えられる
 	heapprop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	resdesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(vertices));
+	resdesc = CD3DX12_RESOURCE_DESC::Buffer(vertices.size());
 	ID3D12Resource* vertBuff = nullptr;
 	result = _dev->CreateCommittedResource(
 		&heapprop,
-		//&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&resdesc,
-		//&CD3DX12_RESOURCE_DESC::Buffer(sizeof(vertices)),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&vertBuff));
@@ -295,7 +311,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		return 0;
 	}
 	// 頂点情報のコピー
-	Vertex* vertMap = nullptr;
+	unsigned char* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Mapping Vertex.");
@@ -306,8 +322,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// 頂点バッファビューの作成
 	D3D12_VERTEX_BUFFER_VIEW vbView = {};
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress(); // バッファの仮想アドレス
-	vbView.SizeInBytes = sizeof(vertices); //全バイト数
-	vbView.StrideInBytes = sizeof(vertices[0]); //１頂点当たりのバイト数
+	vbView.SizeInBytes = vertices.size(); //全バイト数
+	vbView.StrideInBytes = pmdVertexSize; //１頂点当たりのバイト数
 
 
 	// インデックス情報作成
@@ -337,14 +353,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ibView.SizeInBytes = sizeof(indices);
 
 
-	// テクスチャデータ作成（256*256）
-	//std::vector<TexRGBA> texturedata(256 * 256);
-	//for (auto& rgba : texturedata) {
-	//	rgba.R = rand() % 256;
-	//	rgba.G = rand() % 256;
-	//	rgba.B = rand() % 256;
-	//	rgba.A = 255;	// αは1.0
-	//}
 	// テクスチャに画像データを用意する
 	TexMetadata metadata = {};
 	ScratchImage scratchImg = {};
@@ -443,8 +451,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	float angleY = XM_PIDIV4;
 	XMMATRIX worldMat = XMMatrixRotationY(angleY);
 	// ビュー行列
-	XMFLOAT3 eye(0, 0, -5);
-	XMFLOAT3 target(0, 0, 0);
+	XMFLOAT3 eye(0, 10, -15);
+	XMFLOAT3 target(0, 10, 0);
 	XMFLOAT3 up(0, 1, 0);
 	XMMATRIX viewMat = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 	// プロジェクション行列
@@ -452,7 +460,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		XM_PIDIV2,	//画角は90度
 		static_cast<float>(window_width) / static_cast<float>(window_height),	// アスペクト比
 		1.0f,	// ニアクリップ
-		10.0f	// ファークリップ
+		100.0f	// ファークリップ
 	);
 
 
@@ -544,6 +552,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,	// 
 			0				// 一度に描画するインスタンスの数
 		},
+		{
+			// 法線
+			"NORMAL",
+			0,
+			DXGI_FORMAT_R32G32B32_FLOAT,
+			0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
+		},
 		{	// uv
 			"TEXCOORD",
 			0,
@@ -553,8 +571,40 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
 			0
 		},
+		{
+			// ボーン番号
+			"BONE_NO",
+			0,
+			DXGI_FORMAT_R16G16_UINT,
+			0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
+		},
+		{
+			// ウェイト
+			"WEIGHT",
+			0,
+			DXGI_FORMAT_R8_UINT,
+			0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
+		},
+		{
+			// 輪郭線フラグ
+			"EDGE_FLG",
+			0,
+			DXGI_FORMAT_R8_UINT,
+			0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
+		},
 	};
 
+
+	
 
 
 	// グラフィクスパイプラインを作成
@@ -741,13 +791,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		// リソースバリアでバッファの使い道を GPU に通知する
 		D3D12_RESOURCE_BARRIER BarrierDesc = {};
-		//BarrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION; //遷移
-		//BarrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		//BarrierDesc.Transition.pResource = _backBuffers[bbIdx];
-		//BarrierDesc.Transition.Subresource = 0;
-		//BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-		//BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		// 上のリソースバリアの設定は下の１行で済む
 		BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
 			_backBuffers[bbIdx], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
 		);
@@ -756,7 +799,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->OMSetRenderTargets(1, &rtvH, true, nullptr);
 
 		// 3.レンダーターゲットを指定色でクリア
-		float clearColor[] = { 1.0f, 1.0f, 0.0f, 1.0f }; //黄色
+		float clearColor[] = { 1.0f, 1.0f, 1.0f, 1.0f }; //白色
 		_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
 
 		// 描画命令
@@ -764,10 +807,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->SetGraphicsRootSignature(rootSignature);
 		_cmdList->RSSetViewports(1, &viewport);
 		_cmdList->RSSetScissorRects(1, &scissorrect);
-		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);	//ただの点として描画させる
 		_cmdList->IASetVertexBuffers(0, 1, &vbView);
 		_cmdList->IASetIndexBuffer(&ibView);
-		_cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		_cmdList->DrawInstanced(vertNum, 1, 0, 0);
 
 		// 4.レンダーターゲットをクローズ
 		_cmdList->Close();
