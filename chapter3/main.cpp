@@ -64,6 +64,12 @@ namespace {
 	};
 	constexpr size_t pmdVertexSize = 38;	// 頂点一つ当たりのサイズ
 
+	// シェーダー側に渡すための基本的な行列データ
+	struct MatricesData {
+		XMMATRIX world;		//モデル本体を回転させたり移動させたりする行列
+		XMMATRIX viewproj;	//ビューとプロジェクションの合成行列
+	};
+
 
 	// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
 	// @param format フォーマット（% d とか% f とか の） 
@@ -444,11 +450,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// GPU に転送する定数を作成
-	XMMATRIX matrix = XMMatrixIdentity();
+	/*XMMATRIX matrix = XMMatrixIdentity();
 	matrix.r[0].m128_f32[0] = 2.0f / window_width;
 	matrix.r[1].m128_f32[1] = -2.0f / window_height;
 	matrix.r[3].m128_f32[0] = -1.0f;
-	matrix.r[3].m128_f32[1] = 1.0f;
+	matrix.r[3].m128_f32[1] = 1.0f;*/
 
 	// ワールド行列
 	float angleY = XM_PIDIV4;
@@ -469,7 +475,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// 定数バッファーの作成
 	D3D12_HEAP_PROPERTIES constBufferHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	D3D12_RESOURCE_DESC constBufferDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(matrix) + 0xff) & ~0xff);
+	D3D12_RESOURCE_DESC constBufferDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(MatricesData) + 0xff) & ~0xff);
 	ID3D12Resource* constBuff = nullptr;
 	_dev->CreateCommittedResource(
 		&constBufferHeap,
@@ -484,9 +490,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		return 0;
 	}
 	// マップで定数コピー
-	XMMATRIX* mapMatrix;	//マップ先
+	MatricesData* mapMatrix;	//マップ先
 	result = constBuff->Map(0, nullptr, (void**)&mapMatrix);
-	*mapMatrix = matrix;	//行列の内容をコピー
 
 	// 定数バッファービューを作成する
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
@@ -834,7 +839,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{ // 行列計算
 			angleY += 0.1f;
 			worldMat = XMMatrixRotationY(angleY);
-			*mapMatrix = worldMat * viewMat * projMat;
+			mapMatrix->world = worldMat;
+			mapMatrix->viewproj = viewMat * projMat;
 		}
 
 		// 1.コマンドアロケータとコマンドリストをクリア
