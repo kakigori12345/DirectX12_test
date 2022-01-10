@@ -309,6 +309,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			return 0;
 		}
 		// 先ほど作成したディスクリプタヒープを RTV として設定する
+		rtvDesc.Format = _backBuffers[idx]->GetDesc().Format;
 		_dev->CreateRenderTargetView(
 			_backBuffers[idx],
 			&rtvDesc,
@@ -901,11 +902,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		);
 		_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
 
+		// レンダーターゲットとして指定する
 		auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
 		rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		// 深度バッファビューを関連付け
 		auto dsvHandle = dsvHeap->GetCPUDescriptorHandleForHeapStart();
-		// レンダーターゲットとして指定する
 		_cmdList->OMSetRenderTargets(1, &rtvH, true, &dsvHandle);
 		// 深度バッファのクリア
 		_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
