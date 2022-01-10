@@ -64,6 +64,7 @@ namespace {
 	};
 	constexpr size_t pmdVertexSize = 38;	// 頂点一つ当たりのサイズ
 
+#pragma pack(1)//ここから1バイトパッキング…アライメントは発生しない
 	// PMD マテリアル構造体
 	struct PMDMaterial {
 		XMFLOAT3 diffuse;	// ディヒューズ色
@@ -73,33 +74,36 @@ namespace {
 		XMFLOAT3 ambient;	// アンビエント色
 		unsigned char toonIdx;	// トゥーン番号
 		unsigned char edgeFlag;	// マテリアルごとの輪郭線フラグ
-		unsigned char padding[2];	//パディング
+
+		// 2バイトのパディングが発生
+
 		unsigned int indicesNum;	// このマテリアルが割り当てられるインデックス数
 		char texFilePath[20];		// テクスチャファイルパス + α
 	}; // 70バイトのはずだが、パディングにより72バイトになる
+#pragma pack()//1バイトパッキング解除
 
-		// シェーダー側に投げられるマテリアルデータ
-		struct MaterialForHlsl {
-			XMFLOAT3 diffuse;	// ディヒューズ色
-			float alpha;		// ディヒューズα
-			XMFLOAT3 specular;	// スペキュラ色
-			float specularity;	// スペキュラの強さ（乗算値）
-			XMFLOAT3 ambient;	// アンビエント色
-		};
+	// シェーダー側に投げられるマテリアルデータ
+	struct MaterialForHlsl {
+		XMFLOAT3 diffuse;	// ディヒューズ色
+		float alpha;		// ディヒューズα
+		XMFLOAT3 specular;	// スペキュラ色
+		float specularity;	// スペキュラの強さ（乗算値）
+		XMFLOAT3 ambient;	// アンビエント色
+	};
 
-		// それ以外のマテリアルデータ
-		struct AdditionalMaterial {
-			std::string texPath;	// テクスチャファイルパス
-			int toonIdx;			// トゥーン番号
-			bool edgeFlag;			// マテリアルごとの輪郭線フラグ
-		};
+	// それ以外のマテリアルデータ
+	struct AdditionalMaterial {
+		std::string texPath;	// テクスチャファイルパス
+		int toonIdx;			// トゥーン番号
+		bool edgeFlag;			// マテリアルごとの輪郭線フラグ
+	};
 
-		// 全体をまとめる
-		struct Material {
-			unsigned int indicesNum;	// インデックス数
-			MaterialForHlsl material;
-			AdditionalMaterial additional;
-		};
+	// 全体をまとめる
+	struct Material {
+		unsigned int indicesNum;	// インデックス数
+		MaterialForHlsl material;
+		AdditionalMaterial additional;
+	};
 
 	// シェーダー側に渡すための基本的な行列データ
 	struct MatricesData {
@@ -948,7 +952,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			// マテリアル
 			_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
-			_cmdList->SetGraphicsRootDescriptorTable(1, materialDescHeap->GetGPUDescriptorHandleForHeapStart());
+
+			auto materialHandle = materialDescHeap->GetGPUDescriptorHandleForHeapStart();
+			unsigned int idxOffset = 0;
+			for (auto& m : materials) {
+				_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
+				_cmdList->DrawIndexedInstanced(m.indicesNum, 1, idxOffset, 0, 0);
+
+				// ヒープポインタとインデックスを次に進める
+				materialHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				idxOffset += m.indicesNum;
+			}
 		}
 
 		{ // 行列計算
