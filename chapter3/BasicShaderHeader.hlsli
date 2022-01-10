@@ -7,6 +7,14 @@ cbuffer cbuff0 : register(b0) {			//定数バッファー
 	matrix viewproj;
 }
 
+// 定数バッファ1
+// マテリアル用
+cbuffer Material : register(b1) {
+	float4 diffuse;		//ディヒューズ色
+	float4 specular;	//スペキュラ
+	float3 ambient;		//アンビエント
+}
+
 // 頂点シェーダーからピクセルシェーダーへのやり取りに使用する構造体
 struct Output
 {
