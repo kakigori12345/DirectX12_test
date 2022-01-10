@@ -617,8 +617,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	cbvDesc.SizeInBytes = constBuff->GetDesc().Width;
 	// ディスクリプタヒープ上でのメモリ位置（ハンドル）を取得
 	auto basicHeapHandle = basicDescHeap->GetCPUDescriptorHandleForHeapStart(); //この状態だとシェーダリソースビューの位置を示す
-	// インクリメントして定数バッファービューの位置を示すように
-	basicHeapHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	// 実際に定数バッファービューを作成
 	_dev->CreateConstantBufferView(&cbvDesc, basicHeapHandle);
 
@@ -944,15 +942,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// ルートシグネチャの指定
 			_cmdList->SetGraphicsRootSignature(rootSignature);
 
-			// ディスクリプタヒープの指定
+			// 行列変換
 			_cmdList->SetDescriptorHeaps(1, &basicDescHeap);
+			_cmdList->SetGraphicsRootDescriptorTable(0, basicDescHeap->GetGPUDescriptorHandleForHeapStart());
 
-			// ルートパラメータとディスクリプタヒープの関連付け
-			auto heapHandle = basicDescHeap->GetGPUDescriptorHandleForHeapStart();
-			// テクスチャ用
-			_cmdList->SetGraphicsRootDescriptorTable(0, heapHandle);
-			heapHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			// マテリアル用
+			// マテリアル
+			_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
 			_cmdList->SetGraphicsRootDescriptorTable(1, materialDescHeap->GetGPUDescriptorHandleForHeapStart());
 		}
 
@@ -997,7 +992,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
 
 		// 描画命令
-		_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
 		_cmdList->SetPipelineState(_pipelinestate);
 		_cmdList->SetGraphicsRootSignature(rootSignature);
 		_cmdList->RSSetViewports(1, &viewport);
