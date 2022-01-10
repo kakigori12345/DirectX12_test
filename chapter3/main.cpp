@@ -492,91 +492,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 
-	// テクスチャに画像データを用意する
-	TexMetadata metadata = {};
-	ScratchImage scratchImg = {};
-	result = LoadFromWICFile(
-		L"data/img/textest.png", WIC_FLAGS_NONE,
-		&metadata, scratchImg);
-	if (result != S_OK) {
-		DebugOutputFormatString("Missed at Loading Image Data.");
-		return 0;
-	}
-	const Image* img = scratchImg.GetImage(0, 0, 0);	//生データ抽出
-
-	// テクスチャバッファの作成
-	D3D12_HEAP_PROPERTIES heappropTex = {};
-	heappropTex.Type = D3D12_HEAP_TYPE_CUSTOM;	//特殊な設定なので DEFAULT でも UPLOAD でもない
-	heappropTex.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;	//ライトバック
-	heappropTex.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;	//転送はL0,つまりCPU側から直接行う
-	heappropTex.CreationNodeMask = 0;	//単一アダプターなので 0
-	heappropTex.VisibleNodeMask = 0;
-	// リソース設定
-	D3D12_RESOURCE_DESC resDescTex = {};
-	resDescTex.Format	= metadata.format;	// RGBAフォーマット
-	resDescTex.Width	= metadata.width;
-	resDescTex.Height	= metadata.height;
-	resDescTex.DepthOrArraySize		= metadata.arraySize;
-	resDescTex.SampleDesc.Count		= 1;	//通常テクスチャなのでアンチエイリアシングしない
-	resDescTex.SampleDesc.Quality	= 0;	//クオリティは最低
-	resDescTex.MipLevels	= metadata.mipLevels;
-	resDescTex.Dimension	= static_cast<D3D12_RESOURCE_DIMENSION>(metadata.dimension);
-	resDescTex.Layout		= D3D12_TEXTURE_LAYOUT_UNKNOWN;			//レイアウトは決定しない
-	resDescTex.Flags		= D3D12_RESOURCE_FLAG_NONE;				//特にフラグなし
-	// リソースの生成
-	ID3D12Resource* texbuff = nullptr;
-	result = _dev->CreateCommittedResource(
-		&heappropTex,
-		D3D12_HEAP_FLAG_NONE,
-		&resDescTex,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, //テクスチャ用指定
-		nullptr,
-		IID_PPV_ARGS(&texbuff));
-	if (result != S_OK) {
-		DebugOutputFormatString("Missed at Creating Texture Resource.");
-		return 0;
-	}
-	// データ転送
-	result = texbuff->WriteToSubresource(
-		0,			// サブリソースインデックス
-		nullptr,	// 書き込み領域の指定（今回は先頭から全領域）
-		img->pixels,	// 書き込みたいデータのアドレス
-		img->rowPitch,	// １行あたりのデータサイズ
-		img->slicePitch	// スライスあたりのデータサイズ（今回は全サイズ）
-	);
-	if (result != S_OK) {
-		DebugOutputFormatString("Missed at Writing to Subresource.");
-		return 0;
-	}
-
 	// シェーダーリソースビュー
 	ID3D12DescriptorHeap* basicDescHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc = {};
 	descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;	//シェーダーから見えるように
 	descHeapDesc.NodeMask = 0;		// アダプタは一つなので0をセット
-	descHeapDesc.NumDescriptors = 2;// SRV と CBV
+	descHeapDesc.NumDescriptors = 1;// CBV
 	descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;	//シェーダーリソースビュー用
+
 	result = _dev->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&basicDescHeap));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating Descriptor Heap For ShaderReosurceView.");
 		return 0;
 	}
-	// シェーダーリソースビューを作る
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = metadata.format;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;	// 2Dテクスチャ
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Texture2D.MipLevels = 1;	// ミニマップは使用しないので1
-	_dev->CreateShaderResourceView(
-		texbuff,	// ビューと関連付けるバッファ
-		&srvDesc,	// テクスチャ設定情報
-		basicDescHeap->GetCPUDescriptorHandleForHeapStart()	// ヒープのどこに割り当てるか
-		 // もしテクスチャビューが複数あるなら、ここは取得したハンドルからのオフセットを指定する必要がある
-	);
-	if (result != S_OK) {
-		DebugOutputFormatString("Missed at Creating Shader Resource View.");
-		return 0;
-	}
+
 
 	// ワールド行列
 	float angleY = XM_PIDIV4;
@@ -942,29 +871,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	MSG msg = {};
 	
 	while (true) {
-		{// 描画時の設定
-			// ルートシグネチャの指定
-			_cmdList->SetGraphicsRootSignature(rootSignature);
-
-			// 行列変換
-			_cmdList->SetDescriptorHeaps(1, &basicDescHeap);
-			_cmdList->SetGraphicsRootDescriptorTable(0, basicDescHeap->GetGPUDescriptorHandleForHeapStart());
-
-			// マテリアル
-			_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
-
-			auto materialHandle = materialDescHeap->GetGPUDescriptorHandleForHeapStart();
-			unsigned int idxOffset = 0;
-			for (auto& m : materials) {
-				_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
-				_cmdList->DrawIndexedInstanced(m.indicesNum, 1, idxOffset, 0, 0);
-
-				// ヒープポインタとインデックスを次に進める
-				materialHandle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				idxOffset += m.indicesNum;
-			}
-		}
-
 		{ // 行列計算
 			angleY += 0.1f;
 			worldMat = XMMatrixRotationY(angleY);
@@ -973,13 +879,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 
 		// 1.コマンドアロケータとコマンドリストをクリア
-		result = _cmdAllocator->Reset();
+		//result = _cmdAllocator->Reset();
 		// ここで判定するとなぜか E_FAIL が帰ってくる
 		/*if (result != S_OK) {
 			DebugOutputFormatString("Missed at Reset Allocator.");
 			return 0;
 		}*/
-		result = _cmdList->Reset(_cmdAllocator, nullptr);
+		//result = _cmdList->Reset(_cmdAllocator, nullptr);
 		/*if (result != S_OK) {
 			DebugOutputFormatString("Missed at Reset Command List.");
 			return 0;
@@ -988,18 +894,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// 2.レンダーターゲットをバックバッファにセット
 		// 現在のバックバッファを取得
 		UINT bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
-		auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
-		rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
 		// リソースバリアでバッファの使い道を GPU に通知する
-		D3D12_RESOURCE_BARRIER BarrierDesc = {};
-		BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
+		D3D12_RESOURCE_BARRIER BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
 			_backBuffers[bbIdx], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
 		);
 		_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
+
+		auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
+		rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		// 深度バッファビューを関連付け
 		auto dsvHandle = dsvHeap->GetCPUDescriptorHandleForHeapStart();
 		// レンダーターゲットとして指定する
 		_cmdList->OMSetRenderTargets(1, &rtvH, true, &dsvHandle);
+		// 深度バッファのクリア
+		_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 		// 3.レンダーターゲットを指定色でクリア
 		float clearColor[] = { 1.0f, 1.0f, 1.0f, 1.0f }; //白色
@@ -1013,7 +922,35 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		_cmdList->IASetVertexBuffers(0, 1, &vbView);
 		_cmdList->IASetIndexBuffer(&ibView);
-		_cmdList->DrawIndexedInstanced(indicesNum, 1, 0, 0, 0);
+		//_cmdList->DrawIndexedInstanced(indicesNum, 1, 0, 0, 0);
+
+		{// 描画時の設定
+			// 行列変換
+			_cmdList->SetDescriptorHeaps(1, &basicDescHeap);
+			_cmdList->SetGraphicsRootDescriptorTable(0, basicDescHeap->GetGPUDescriptorHandleForHeapStart());
+
+			// マテリアル
+			_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
+
+			auto materialHandle = materialDescHeap->GetGPUDescriptorHandleForHeapStart();
+			unsigned int idxOffset = 0;
+			auto cbvsrvIncSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+			for (auto& m : materials) {
+				_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
+				_cmdList->DrawIndexedInstanced(m.indicesNum, 1, idxOffset, 0, 0);
+
+				// ヒープポインタとインデックスを次に進める
+				materialHandle.ptr += cbvsrvIncSize;
+				idxOffset += m.indicesNum;
+			}
+		}
+
+		// リソースバリアでバッファの使い道を GPU に通知する
+		BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
+			_backBuffers[bbIdx], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT
+		);
+		_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
 
 		// 4.レンダーターゲットをクローズ
 		_cmdList->Close();
@@ -1031,6 +968,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		if (_fence->GetCompletedValue() != _fenceVal) {
 			// イベントハンドルを取得
 			auto event = CreateEvent(nullptr, false, false, nullptr);
+			if (event == nullptr) {
+				DebugOutputFormatString("Missed at Creating Event.");
+				return 0;
+			}
 
 			_fence->SetEventOnCompletion(_fenceVal, event);
 
@@ -1065,8 +1006,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 
 
-		// 深度バッファのクリア
-		_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 
 		// メッセージ処理
