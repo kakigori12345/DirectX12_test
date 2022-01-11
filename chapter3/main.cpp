@@ -563,10 +563,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				continue;
 			}
 
+			// スフィアファイルが混在しているかチェック
+			std::string texFileName = pmdMaterials[i].texFilePath;
+			if (std::count(texFileName.begin(), texFileName.end(), '*') > 0) {
+				// スプリッタがあるので、ファイル名分割
+				auto namepair = SplitFileName(texFileName);
+				if (GetExtension(namepair.first) == "sph" ||
+					GetExtension(namepair.first) == "spa")
+				{
+					texFileName = namepair.second;
+				}
+				else {
+					texFileName = namepair.first;
+				}
+			}
+
 			// モデルとテクスチャパスから、プログラムから見たテクスチャパスを取得
 			string texFilePath = GetTexturePathFromModelAndTexPath(
 				strModelPath,
-				pmdMaterials[i].texFilePath);
+				texFileName.c_str());
 
 			textureResources[i] = LoadTextureFromFile(texFilePath, _dev);
 		}

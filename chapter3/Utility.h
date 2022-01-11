@@ -62,3 +62,27 @@ std::wstring GetWireStringFromString(const std::string& str) {
 	return wstr;
 }
 
+//! @brief ファイル名から拡張子を取得
+//! @param[in] path 対象のパス文字列
+//! @return 拡張子
+std::string GetExtension(const std::string& path) {
+	const int idx = path.rfind('.');
+	return path.substr(idx + 1, path.length() - idx - 1);
+}
+
+//! @brief テクスチャのパスをセパレータ文字で分離する
+//! param[in] path 対象のパス文字列
+//! param[in] splitter 区切り文字
+//! return 分離前後の文字列ペア
+std::pair<std::string, std::string> SplitFileName(
+	const std::string& path, const char splitter = '*'
+) {
+	std::pair<std::string, std::string> retval;
+
+	const int idx = path.find(splitter);
+	retval.first = path.substr(0, idx);
+	retval.second = path.substr(idx + 1, path.length() - idx - 1);
+
+	return retval;
+}
+
