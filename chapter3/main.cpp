@@ -32,8 +32,8 @@ using namespace DirectX;
 namespace {
 
 	// 定数
-	int window_width = 800;
-	int window_height = 480;
+	int window_width = 1280;
+	int window_height = 760;
 
 	// 頂点情報
 	struct Vertex {
@@ -81,6 +81,8 @@ namespace {
 		char texFilePath[20];		// テクスチャファイルパス + α
 	}; // 70バイトのはずだが、パディングにより72バイトになる
 #pragma pack()//1バイトパッキング解除
+	static_assert(sizeof(PMDMaterial) == 70, "assertion error.");
+
 
 	// シェーダー側に投げられるマテリアルデータ
 	struct MaterialForHlsl {
@@ -433,7 +435,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	materialBuffSize = (materialBuffSize + 0xff) & ~0xff;
 
 	D3D12_HEAP_PROPERTIES materialHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	D3D12_RESOURCE_DESC materialDesc = CD3DX12_RESOURCE_DESC::Buffer(materialBuffSize * materialNum);
+	D3D12_RESOURCE_DESC materialDesc = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(materialBuffSize) * materialNum);
 
 	ID3D12Resource* materialBuff = nullptr;
 	result = _dev->CreateCommittedResource(
@@ -487,9 +489,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	matCBVDesc.SizeInBytes = materialBuffSize;
 	// ディスクリプタヒープの先頭アドレスを記録
 	auto matDescHeapHandle = materialDescHeap->GetCPUDescriptorHandleForHeapStart();
+	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	for (int i = 0; i < materialNum; ++i) {
 		_dev->CreateConstantBufferView(&matCBVDesc, matDescHeapHandle);
 		matCBVDesc.BufferLocation += materialBuffSize;
+		matDescHeapHandle.ptr += incSize;
 	}
 
 
@@ -506,23 +510,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DebugOutputFormatString("Missed at Creating Descriptor Heap For ShaderReosurceView.");
 		return 0;
 	}
-
-
-	// ワールド行列
-	float angleY = XM_PIDIV4;
-	XMMATRIX worldMat = XMMatrixRotationY(angleY);
-	// ビュー行列
-	XMFLOAT3 eye(0, 10, -15);
-	XMFLOAT3 target(0, 10, 0);
-	XMFLOAT3 up(0, 1, 0);
-	XMMATRIX viewMat = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
-	// プロジェクション行列
-	XMMATRIX projMat = XMMatrixPerspectiveFovLH(
-		XM_PIDIV2,	//画角は90度
-		static_cast<float>(window_width) / static_cast<float>(window_height),	// アスペクト比
-		1.0f,	// ニアクリップ
-		100.0f	// ファークリップ
-	);
 
 
 	// 定数バッファーの作成
@@ -869,28 +856,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	scissorrect.bottom = scissorrect.top + window_height;
 
 
+	// ワールド行列
+	float angleY = 0;// XM_PIDIV4;
+	// ビュー行列
+	XMFLOAT3 eye(0, 10, -15);
+	XMFLOAT3 target(0, 10, 0);
+	XMFLOAT3 up(0, 1, 0);
+	XMMATRIX viewMat = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+	// プロジェクション行列
+	XMMATRIX projMat = XMMatrixPerspectiveFovLH(
+		XM_PIDIV2,	//画角は90度
+		static_cast<float>(window_width) / static_cast<float>(window_height),	// アスペクト比
+		1.0f,	// ニアクリップ
+		100.0f	// ファークリップ
+	);
+
+
 	MSG msg = {};
 	
 	while (true) {
 		{ // 行列計算
-			angleY += 0.1f;
-			worldMat = XMMatrixRotationY(angleY);
+			angleY += 0.01f;
+			XMMATRIX worldMat = XMMatrixRotationY(angleY);
 			mapMatrix->world = worldMat;
 			mapMatrix->viewproj = viewMat * projMat;
 		}
-
-		// 1.コマンドアロケータとコマンドリストをクリア
-		//result = _cmdAllocator->Reset();
-		// ここで判定するとなぜか E_FAIL が帰ってくる
-		/*if (result != S_OK) {
-			DebugOutputFormatString("Missed at Reset Allocator.");
-			return 0;
-		}*/
-		//result = _cmdList->Reset(_cmdAllocator, nullptr);
-		/*if (result != S_OK) {
-			DebugOutputFormatString("Missed at Reset Command List.");
-			return 0;
-		}*/
 
 		// 2.レンダーターゲットをバックバッファにセット
 		// 現在のバックバッファを取得
@@ -935,7 +925,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			auto materialHandle = materialDescHeap->GetGPUDescriptorHandleForHeapStart();
 			unsigned int idxOffset = 0;
-			auto cbvsrvIncSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			const auto cbvsrvIncSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 			for (auto& m : materials) {
 				_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
