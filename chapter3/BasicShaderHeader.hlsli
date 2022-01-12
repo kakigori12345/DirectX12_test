@@ -1,8 +1,11 @@
 
 // レジスタから情報を取得するための設定
-Texture2D<float4> tex : register(t0);	//0番スロットに設定されたテクスチャ
-SamplerState smp : register(s0);		//0番スロットに設定されたサンプラー
-cbuffer cbuff0 : register(b0) {			//定数バッファー
+Texture2D<float4> tex : register(t0);	//0 番スロットに設定されたテクスチャ
+Texture2D<float4> sph : register(t1);	//1 番スロットに設定されたテクスチャ
+
+SamplerState smp : register(s0);		//0 番スロットに設定されたサンプラー
+
+cbuffer cbuff0 : register(b0) {			//定数バッファー0
 	matrix world;
 	matrix viewproj;
 }
