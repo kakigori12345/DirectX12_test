@@ -6,9 +6,11 @@ Texture2D<float4> spa : register(t2);	//2 ''
 
 SamplerState smp : register(s0);		//0 番スロットに設定されたサンプラー
 
-cbuffer cbuff0 : register(b0) {			//定数バッファー0
+cbuffer SceneBuffer : register(b0) {			//定数バッファー0
 	matrix world;
-	matrix viewproj;
+	matrix view;
+	matrix proj;
+	float3 eye;
 }
 
 // 定数バッファ1
@@ -23,6 +25,9 @@ cbuffer Material : register(b1) {
 struct Output
 {
 	float4 svpos : SV_POSITION;	// システム用頂点座標
-	float4 normal : NORMAL;		// 法線ベクトル
+	float4 pos : POSITION;		// 頂点座標
+	float4 normal : NORMAL0;	// 法線ベクトル
+	float4 vnormal: NORMAL1;	// ビュー変換後の法線ベクトル
 	float2 uv : TEXCOORD;		// uv
+	float3 ray : VECTOR;		// 視線ベクトル
 };

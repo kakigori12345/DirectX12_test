@@ -111,9 +111,11 @@ namespace {
 	};
 
 	// シェーダー側に渡すための基本的な行列データ
-	struct MatricesData {
-		XMMATRIX world;		//モデル本体を回転させたり移動させたりする行列
-		XMMATRIX viewproj;	//ビューとプロジェクションの合成行列
+	struct SceneData {
+		XMMATRIX world;
+		XMMATRIX view;
+		XMMATRIX proj;
+		XMFLOAT3 eye;
 	};
 
 
@@ -497,7 +499,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// PMD の読み込み
-	string strModelPath = "data/Model/巡音ルカ.pmd";
+	string strModelPath = "data/Model/初音ミク.pmd";
 
 	// ヘッダ
 	char signature[3] = {};		//シグネチャ
@@ -825,7 +827,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// 定数バッファーの作成
 	D3D12_HEAP_PROPERTIES constBufferHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-	D3D12_RESOURCE_DESC constBufferDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(MatricesData) + 0xff) & ~0xff);
+	D3D12_RESOURCE_DESC constBufferDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(SceneData) + 0xff) & ~0xff);
 	ID3D12Resource* constBuff = nullptr;
 	_dev->CreateCommittedResource(
 		&constBufferHeap,
@@ -840,7 +842,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		return 0;
 	}
 	// マップで定数コピー
-	MatricesData* mapMatrix;	//マップ先
+	SceneData* mapMatrix;	//マップ先
 	result = constBuff->Map(0, nullptr, (void**)&mapMatrix);
 
 	// 定数バッファービューを作成する
@@ -1199,7 +1201,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			angleY += 0.01f;
 			XMMATRIX worldMat = XMMatrixRotationY(angleY);
 			mapMatrix->world = worldMat;
-			mapMatrix->viewproj = viewMat * projMat;
+			mapMatrix->view = viewMat;
+			mapMatrix->proj = projMat;
+			mapMatrix->eye = eye;
 		}
 
 		// 2.レンダーターゲットをバックバッファにセット
