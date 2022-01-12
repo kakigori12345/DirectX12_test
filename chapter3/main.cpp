@@ -1,5 +1,7 @@
+// Windows
 #include <Windows.h>
 #include <vector>
+#include <map>
 
 // Direct3D
 #include <d3d12.h>
@@ -152,6 +154,9 @@ namespace {
 		debugLayer->Release();
 	}
 
+	// テクスチャ呼び出し用の関数を用意
+	using LoadLambda_t = function<HRESULT(const wstring& path, TexMetadata*, ScratchImage&)>;
+	map<string, LoadLambda_t> loadLambdaTable;
 
 	// テクスチャをロードしてリソースを作成する
 	ID3D12Resource* LoadTextureFromFile(string& texPath, ID3D12Device* dev) {
@@ -159,9 +164,13 @@ namespace {
 		TexMetadata metadata = {};
 		ScratchImage scratchImg = {};
 
-		auto result = LoadFromWICFile(
-			GetWireStringFromString(texPath).c_str(),
-			WIC_FLAGS_NONE,
+		wstring wtexpath = GetWideStringFromString(texPath).c_str();
+		string extension = GetExtension(texPath);
+
+		//TODO: ファイルパスの指定、拡張子がない場合のエラーチェック
+
+		auto result = loadLambdaTable[extension](
+			wtexpath,
 			&metadata,
 			scratchImg
 		);
@@ -594,6 +603,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	);
 
 	fclose(fp);
+
+	// テクスチャファイルの種類ごとに別々の読み込み関数を使用する
+	  loadLambdaTable["sph"]
+	= loadLambdaTable["spa"]
+	= loadLambdaTable["bmp"]
+	= loadLambdaTable["png"]
+	= loadLambdaTable["jpg"]
+	= [](const wstring& path, TexMetadata* meta, ScratchImage& img)->HRESULT
+	{
+		return LoadFromWICFile(path.c_str(), WIC_FLAGS_NONE, meta, img);
+	};
+
+	loadLambdaTable["tga"]
+		= [](const wstring& path, TexMetadata* meta, ScratchImage& img)->HRESULT
+	{
+		return LoadFromTGAFile(path.c_str(), meta, img);
+	};
+
+	loadLambdaTable["dds"]
+		= [](const wstring& path, TexMetadata* meta, ScratchImage& img)->HRESULT
+	{
+		return LoadFromDDSFile(path.c_str(), DDS_FLAGS_NONE, meta, img);
+	};
 
 	vector<Material> materials(materialNum);
 	vector<ID3D12Resource*> textureResources(materialNum, nullptr);

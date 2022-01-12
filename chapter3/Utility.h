@@ -34,7 +34,7 @@ std::string GetTexturePathFromModelAndTexPath(
 //! @brief マルチバイトからワイド文字列への変換
 //! @param[in] str マルチバイト文字列
 //! @return 変換後のワイド文字列
-std::wstring GetWireStringFromString(const std::string& str) {
+std::wstring GetWideStringFromString(const std::string& str) {
 	// まずは変換後の文字列数を取得する
 	const int wstrNum1 = MultiByteToWideChar(
 		CP_ACP,
