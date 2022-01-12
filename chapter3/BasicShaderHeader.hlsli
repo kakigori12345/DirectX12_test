@@ -1,7 +1,8 @@
 
 // レジスタから情報を取得するための設定
 Texture2D<float4> tex : register(t0);	//0 番スロットに設定されたテクスチャ
-Texture2D<float4> sph : register(t1);	//1 番スロットに設定されたテクスチャ
+Texture2D<float4> sph : register(t1);	//1 ''
+Texture2D<float4> spa : register(t2);	//2 ''
 
 SamplerState smp : register(s0);		//0 番スロットに設定されたサンプラー
 

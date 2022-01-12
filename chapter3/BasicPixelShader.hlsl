@@ -10,5 +10,6 @@ float4 BasicPS(Output input) : SV_TARGET
 	return float4(brightness, brightness, brightness, 1)	//輝度
 		* diffuse						//ディヒューズ
 		* tex.Sample(smp, input.uv)		//テクスチャカラー
-		* sph.Sample(smp, normalUV);	//スフィアマップ
+		* sph.Sample(smp, normalUV)		//スフィアマップ（乗算）
+		+ spa.Sample(smp, normalUV);	//スフィアマップ（加算）
 }
