@@ -3,8 +3,10 @@
 Texture2D<float4> tex : register(t0);	//0 番スロットに設定されたテクスチャ
 Texture2D<float4> sph : register(t1);	//1 ''
 Texture2D<float4> spa : register(t2);	//2 ''
+Texture2D<float4> toon: register(t3);	//3 ''
 
 SamplerState smp : register(s0);		//0 番スロットに設定されたサンプラー
+SamplerState smpToon : register(s1);	//1 ''（トゥーン用）
 
 cbuffer SceneBuffer : register(b0) {			//定数バッファー0
 	matrix world;
