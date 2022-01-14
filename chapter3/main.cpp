@@ -11,6 +11,7 @@
 
 // ヘルパー
 #include <d3dx12.h>
+#include <wrl.h>
 
 // シェーダーのコンパイル
 #include <d3dcompiler.h>
@@ -33,6 +34,7 @@
 #endif
 using namespace std;
 using namespace DirectX;
+using namespace Microsoft::WRL;
 
 namespace {
 
@@ -406,16 +408,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// 3Dオブジェクトの生成
-	ID3D12Device* _dev = nullptr;
-	IDXGIFactory6* _dxgiFactory = nullptr;
-	IDXGISwapChain4* _swapchain = nullptr;
+	ComPtr<ID3D12Device> _dev = nullptr;
+	ComPtr<IDXGIFactory6> _dxgiFactory = nullptr;
+	ComPtr<IDXGISwapChain4> _swapchain = nullptr;
 
 
 	// ファクトリー
 #ifdef _DEBUG
-	auto result = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&_dxgiFactory));
+	auto result = CreateDXGIFactory2(
+		DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf()));
 #else
-	auto result = CreateDXGIFactory1(IID_PPV_ARGS(&_dxgiFactory));
+	auto result = CreateDXGIFactory1(
+		IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf()));
 #endif
 
 	// アダプター
@@ -438,19 +442,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 	// デバイスオブジェクト
-	D3D12CreateDevice(tmpAdapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&_dev));
+	D3D12CreateDevice(
+		tmpAdapter, 
+		D3D_FEATURE_LEVEL_12_1, 
+		IID_PPV_ARGS(_dev.ReleaseAndGetAddressOf()));
 
 
 	// コマンドリストの作成とコマンドアロケータ
-	ID3D12CommandAllocator* _cmdAllocator = nullptr;
-	ID3D12GraphicsCommandList* _cmdList = nullptr;
+	ComPtr<ID3D12CommandAllocator> _cmdAllocator = nullptr;
+	ComPtr<ID3D12GraphicsCommandList> _cmdList = nullptr;
 
-	result = _dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&_cmdAllocator));
+	result = _dev->CreateCommandAllocator(
+		D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(_cmdAllocator.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating CommandAllocator.");
 		return 0;
 	}
-	result = _dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _cmdAllocator, nullptr, IID_PPV_ARGS(&_cmdList));
+
+	result = _dev->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		_cmdAllocator.Get(),
+		nullptr,
+		IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating CommandList.");
 		return 0;
@@ -463,8 +477,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	cmdQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 	cmdQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	// 生成
-	ID3D12CommandQueue* _cmdQueue = nullptr;
-	result = _dev->CreateCommandQueue(&cmdQueueDesc, IID_PPV_ARGS(&_cmdQueue));
+	ComPtr<ID3D12CommandQueue> _cmdQueue = nullptr;
+	result = _dev->CreateCommandQueue(&cmdQueueDesc, IID_PPV_ARGS(_cmdQueue.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating CommandQueue.");
 		return 0;
@@ -487,12 +501,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	swapchainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // ウィンドウ⇔フルスクリーン切り替え可能
 
 	result = _dxgiFactory->CreateSwapChainForHwnd(
-		_cmdQueue,
+		_cmdQueue.Get(),
 		hwnd,
 		&swapchainDesc,
 		nullptr,
 		nullptr,
-		(IDXGISwapChain1**)&_swapchain);
+		(IDXGISwapChain1**)_swapchain.ReleaseAndGetAddressOf());
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating SwapChain.");
 		return 0;
@@ -506,8 +520,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	heapDesc.NumDescriptors = 2; //表裏の２つ
 	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
-	ID3D12DescriptorHeap* rtvHeaps = nullptr;
-	result = _dev->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeaps)); //この段階ではまだ RTV ではない
+	ComPtr<ID3D12DescriptorHeap> rtvHeaps = nullptr;
+	result = _dev->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(rtvHeaps.ReleaseAndGetAddressOf())); //この段階ではまだ RTV ではない
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating DescriptorHeap.");
 		return 0;
@@ -563,14 +577,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3D12_HEAP_PROPERTIES heapprop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	D3D12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(vertices.size());
 
-	ID3D12Resource* vertBuff = nullptr;
+	ComPtr<ID3D12Resource> vertBuff = nullptr;
 	result = _dev->CreateCommittedResource(
 		&heapprop,
 		D3D12_HEAP_FLAG_NONE,
 		&resdesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&vertBuff));
+		IID_PPV_ARGS(vertBuff.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating CommittedResource.");
 		return 0;
@@ -599,7 +613,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	fread(indices.data(), indices.size() * sizeof(indices[0]), 1, fp);
 
 	// インデックスバッファの作成
-	ID3D12Resource* idxBuff = nullptr;
+	ComPtr<ID3D12Resource> idxBuff = nullptr;
 	resdesc = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(indices.size()) * sizeof(indices[0]));
 	result = _dev->CreateCommittedResource(
 		&heapprop,
@@ -607,7 +621,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		&resdesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&idxBuff) );
+		IID_PPV_ARGS(idxBuff.ReleaseAndGetAddressOf()));
 	// バッファにコピー
 	unsigned short* mappedIdx = nullptr;
 	idxBuff->Map(0, nullptr, (void**)&mappedIdx);
@@ -687,7 +701,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			sprintf_s(toonFileName, "toon%02d.bmp", pmdMaterials[i].toonIdx + 1);
 			toonFilePath += toonFileName;
 
-			toonResources[i] = LoadTextureFromFile(toonFilePath, _dev);
+			toonResources[i] = LoadTextureFromFile(toonFilePath, _dev.Get());
 
 			// 各種テクスチャを読み込む
 			string texFileName = pmdMaterials[i].texFilePath;
@@ -735,15 +749,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// モデルとテクスチャパスから、プログラムから見たテクスチャパスを取得
 			if (texFileName != "") {
 				auto texFilePath = GetTexturePathFromModelAndTexPath(strModelPath, texFileName.c_str());
-				textureResources[i] = LoadTextureFromFile(texFilePath, _dev);
+				textureResources[i] = LoadTextureFromFile(texFilePath, _dev.Get());
 			}
 			if (sphFileName != "") {
 				auto sphFilePath = GetTexturePathFromModelAndTexPath(strModelPath, sphFileName.c_str());
-				sphResources[i] = LoadTextureFromFile(sphFilePath, _dev);
+				sphResources[i] = LoadTextureFromFile(sphFilePath, _dev.Get());
 			}
 			if (spaFileName != "") {
 				auto spaFilePath = GetTexturePathFromModelAndTexPath(strModelPath, spaFileName.c_str());
-				spaResources[i] = LoadTextureFromFile(spaFilePath, _dev);
+				spaResources[i] = LoadTextureFromFile(spaFilePath, _dev.Get());
 			}
 		}
 	}
@@ -757,14 +771,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3D12_HEAP_PROPERTIES materialHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	D3D12_RESOURCE_DESC materialDesc = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(materialBuffSize) * materialNum);
 
-	ID3D12Resource* materialBuff = nullptr;
+	ComPtr<ID3D12Resource> materialBuff = nullptr;
 	result = _dev->CreateCommittedResource(
 		&materialHeapProp,
 		D3D12_HEAP_FLAG_NONE,
 		&materialDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&materialBuff)
+		IID_PPV_ARGS(materialBuff.ReleaseAndGetAddressOf())
 	);
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating Material Buffer.");
@@ -787,7 +801,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	materialBuff->Unmap(0, nullptr);
 
 	// マテリアル用ディスクリプタヒープとビューの作成
-	ID3D12DescriptorHeap* materialDescHeap = nullptr;
+	ComPtr<ID3D12DescriptorHeap> materialDescHeap = nullptr;
 
 	D3D12_DESCRIPTOR_HEAP_DESC matDescHeapDesc = {};
 	matDescHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -796,7 +810,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	matDescHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
 	result = _dev->CreateDescriptorHeap(
-		&matDescHeapDesc, IID_PPV_ARGS(&materialDescHeap)
+		&matDescHeapDesc, IID_PPV_ARGS(materialDescHeap.ReleaseAndGetAddressOf())
 	);
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating DescriptorHeap For Material.");
@@ -818,9 +832,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	auto matDescHeapHandle = materialDescHeap->GetCPUDescriptorHandleForHeapStart();
 	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	auto whiteTex = CreateWhiteTexture(_dev);
-	auto blackTex = CreateBlackTexture(_dev);
-	auto gradTex = CreateGrayGradationTexture(_dev);
+	ComPtr<ID3D12Resource> whiteTex = CreateWhiteTexture(_dev.Get());
+	ComPtr<ID3D12Resource> blackTex = CreateBlackTexture(_dev.Get());
+	ComPtr<ID3D12Resource> gradTex = CreateGrayGradationTexture(_dev.Get());
 
 	for (int i = 0; i < materialNum; ++i) {
 		// マテリアル用定数バッファビュー
@@ -842,7 +856,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// 白いテクスチャで埋め合わせ
 			srvDesc.Format = whiteTex->GetDesc().Format;
 			_dev->CreateShaderResourceView(
-				whiteTex, &srvDesc, matDescHeapHandle
+				whiteTex.Get(), &srvDesc, matDescHeapHandle
 			);
 		}
 		matDescHeapHandle.ptr += incSize;
@@ -859,7 +873,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// 白いテクスチャで埋め合わせ
 			srvDesc.Format = whiteTex->GetDesc().Format;
 			_dev->CreateShaderResourceView(
-				whiteTex, &srvDesc, matDescHeapHandle
+				whiteTex.Get(), &srvDesc, matDescHeapHandle
 			);
 		}
 		matDescHeapHandle.ptr += incSize;
@@ -876,7 +890,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// 黒いテクスチャで埋め合わせ
 			srvDesc.Format = blackTex->GetDesc().Format;
 			_dev->CreateShaderResourceView(
-				blackTex, &srvDesc, matDescHeapHandle
+				blackTex.Get(), &srvDesc, matDescHeapHandle
 			);
 		}
 		matDescHeapHandle.ptr += incSize;
@@ -893,7 +907,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// グレイグラデーションで埋め合わせ
 			srvDesc.Format = gradTex->GetDesc().Format;
 			_dev->CreateShaderResourceView(
-				gradTex, &srvDesc, matDescHeapHandle
+				gradTex.Get(), &srvDesc, matDescHeapHandle
 			);
 		}
 		matDescHeapHandle.ptr += incSize;
@@ -901,14 +915,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// シェーダーリソースビュー
-	ID3D12DescriptorHeap* basicDescHeap = nullptr;
+	ComPtr<ID3D12DescriptorHeap> basicDescHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc = {};
 	descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;	//シェーダーから見えるように
 	descHeapDesc.NodeMask = 0;		// アダプタは一つなので0をセット
 	descHeapDesc.NumDescriptors = 1;// CBV
 	descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;	//シェーダーリソースビュー用
 
-	result = _dev->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&basicDescHeap));
+	result = _dev->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(basicDescHeap.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating Descriptor Heap For ShaderReosurceView.");
 		return 0;
@@ -918,14 +932,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// 定数バッファーの作成
 	D3D12_HEAP_PROPERTIES constBufferHeap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	D3D12_RESOURCE_DESC constBufferDesc = CD3DX12_RESOURCE_DESC::Buffer((sizeof(SceneData) + 0xff) & ~0xff);
-	ID3D12Resource* constBuff = nullptr;
+	ComPtr<ID3D12Resource> constBuff = nullptr;
 	_dev->CreateCommittedResource(
 		&constBufferHeap,
 		D3D12_HEAP_FLAG_NONE,
 		&constBufferDesc,	// 0xffアライメント
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&constBuff)
+		IID_PPV_ARGS(constBuff.ReleaseAndGetAddressOf())
 	);
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating Const Buffer.");
@@ -946,9 +960,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// シェーダーの読み込みと生成
-	ID3DBlob* _vsBlob = nullptr;
-	ID3DBlob* _psBlob = nullptr;
-	ID3DBlob* errorBlob = nullptr;
+	ComPtr<ID3DBlob> _vsBlob = nullptr;
+	ComPtr<ID3DBlob> _psBlob = nullptr;
+	ComPtr<ID3DBlob> errorBlob = nullptr;
 
 	result = D3DCompileFromFile(
 		L"BasicVertexShader.hlsl",
@@ -1072,14 +1086,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	depthClearValue.DepthStencil.Depth = 1.0f;	// 深さ1.0fでクリア
 	depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;	//32ビット float 値としてクリア
 
-	ID3D12Resource* depthBuffer = nullptr;
+	ComPtr<ID3D12Resource> depthBuffer = nullptr;
 	result = _dev->CreateCommittedResource(
 		&depthHeapProp,
 		D3D12_HEAP_FLAG_NONE,
 		&depthResDesc,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,	//深度地書き込み用に使う
 		&depthClearValue,
-		IID_PPV_ARGS(&depthBuffer)
+		IID_PPV_ARGS(depthBuffer.ReleaseAndGetAddressOf())
 	);
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating depth stensil buffer.");
@@ -1091,8 +1105,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	dsvHeapDesc.NumDescriptors = 1;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 
-	ID3D12DescriptorHeap* dsvHeap = nullptr;
-	result = _dev->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&dsvHeap));
+	ComPtr<ID3D12DescriptorHeap> dsvHeap = nullptr;
+	result = _dev->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(dsvHeap.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating Depth Heap.");
 		return 0;
@@ -1105,7 +1119,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 
 	_dev->CreateDepthStencilView(
-		depthBuffer,
+		depthBuffer.Get(),
 		&dsvDesc,
 		dsvHeap->GetCPUDescriptorHandleForHeapStart()
 	);
@@ -1116,8 +1130,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeline = {};
 	// 頂点シェーダー、ピクセルシェーダーを設定
 	gpipeline.pRootSignature = nullptr; //後々設定
-	gpipeline.VS = CD3DX12_SHADER_BYTECODE(_vsBlob);
-	gpipeline.PS = CD3DX12_SHADER_BYTECODE(_psBlob);
+	gpipeline.VS = CD3DX12_SHADER_BYTECODE(_vsBlob.Get());
+	gpipeline.PS = CD3DX12_SHADER_BYTECODE(_psBlob.Get());
 	// サンプルマスクとラスタライザーの設定
 	gpipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK; //デフォルトのサンプルマスク（0xffffffff）
 	gpipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -1176,7 +1190,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	rootSignatureDesc.pStaticSamplers = samplerDesc;
 	rootSignatureDesc.NumStaticSamplers = 2;
 
-	ID3DBlob* rootSigBlob = nullptr;
+	ComPtr<ID3DBlob> rootSigBlob = nullptr;
 	result = D3D12SerializeRootSignature(
 		&rootSignatureDesc,
 		D3D_ROOT_SIGNATURE_VERSION_1_0,
@@ -1187,24 +1201,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		return 0;
 	}
 
-	ID3D12RootSignature* rootSignature = nullptr;
+	ComPtr<ID3D12RootSignature> rootSignature = nullptr;
 	result = _dev->CreateRootSignature(
 		0,	//nodemask
 		rootSigBlob->GetBufferPointer(),
 		rootSigBlob->GetBufferSize(),
-		IID_PPV_ARGS(&rootSignature));
+		IID_PPV_ARGS(rootSignature.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating Root Signature");
 		return 0;
 	}
-	rootSigBlob->Release();
 	// 作成したルートシグネチャをパイプラインに設定
-	gpipeline.pRootSignature = rootSignature;
+	gpipeline.pRootSignature = rootSignature.Get();
 
 
 	// グラフィクスパイプラインステートオブジェクトの生成
-	ID3D12PipelineState* _pipelinestate = nullptr;
-	result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(&_pipelinestate));
+	ComPtr<ID3D12PipelineState> _pipelinestate = nullptr;
+	result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(_pipelinestate.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating Graphics Pipeline State.");
 		return 0;
@@ -1273,8 +1286,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
 
 		// 描画命令
-		_cmdList->SetPipelineState(_pipelinestate);
-		_cmdList->SetGraphicsRootSignature(rootSignature);
+		_cmdList->SetPipelineState(_pipelinestate.Get());
+		_cmdList->SetGraphicsRootSignature(rootSignature.Get());
 		_cmdList->RSSetViewports(1, &viewport);
 		_cmdList->RSSetScissorRects(1, &scissorrect);
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -1284,11 +1297,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		{// 描画時の設定
 			// 行列変換
-			_cmdList->SetDescriptorHeaps(1, &basicDescHeap);
+			ID3D12DescriptorHeap* bdh[] = { basicDescHeap.Get() };
+			_cmdList->SetDescriptorHeaps(1, bdh);
 			_cmdList->SetGraphicsRootDescriptorTable(0, basicDescHeap->GetGPUDescriptorHandleForHeapStart());
 
 			// マテリアル
-			_cmdList->SetDescriptorHeaps(1, &materialDescHeap);
+			ID3D12DescriptorHeap* mdh[] = { materialDescHeap.Get() };
+			_cmdList->SetDescriptorHeaps(1, mdh);
 
 			auto materialHandle = materialDescHeap->GetGPUDescriptorHandleForHeapStart();
 			unsigned int idxOffset = 0;
@@ -1316,14 +1331,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		// 5.たまったコマンドをコマンドリストに投げる
 		// コマンドリスト実行
-		ID3D12CommandList* cmdLists[] = { _cmdList };
+		ID3D12CommandList* cmdLists[] = { _cmdList.Get() };
 		_cmdQueue->ExecuteCommandLists(1, cmdLists);
 		// フェンスを作成しておく
-		ID3D12Fence* _fence = nullptr;
+		ComPtr<ID3D12Fence> _fence = nullptr;
 		UINT64 _fenceVal = 0;
-		result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&_fence));
+		result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(_fence.ReleaseAndGetAddressOf()));
 		// GPUの処理が完了するまで待つ
-		_cmdQueue->Signal(_fence, ++_fenceVal);
+		_cmdQueue->Signal(_fence.Get(), ++_fenceVal);
 		if (_fence->GetCompletedValue() != _fenceVal) {
 			// イベントハンドルを取得
 			auto event = CreateEvent(nullptr, false, false, nullptr);
@@ -1347,7 +1362,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			DebugOutputFormatString("Missed at Reset Allocator.");
 			return 0;
 		}
-		result = _cmdList->Reset(_cmdAllocator, nullptr);
+		result = _cmdList->Reset(_cmdAllocator.Get(), nullptr);
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Reset CommandList.");
 			return 0;
@@ -1372,7 +1387,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			TranslateMessage(&msg); DispatchMessage(&msg);
 		}
 
-		//アプリケーション が 終わる とき に message が WM_ QUIT に なる
+		//アプリケーション が 終わる とき に message が WM_QUIT に なる
 		if (msg. message == WM_QUIT) {
 			break;
 		}
