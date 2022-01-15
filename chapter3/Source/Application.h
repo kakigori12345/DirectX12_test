@@ -46,6 +46,7 @@ struct Material {
 
 // シェーダー側に渡すための基本的な行列データ
 struct SceneData {
+	// TODO: 16バイトアライメントを施す
 	DirectX::XMMATRIX world;
 	DirectX::XMMATRIX view;
 	DirectX::XMMATRIX proj;
@@ -86,7 +87,7 @@ public:
 	// メンバ変数
 	//----------------------------------------------------
 private:
-	WNDCLASSEX w;
+	WNDCLASSEX window;
 	Microsoft::WRL::ComPtr<ID3D12Device>				_dev			= nullptr;
 	Microsoft::WRL::ComPtr<IDXGIFactory6>				_dxgiFactory	= nullptr;
 	Microsoft::WRL::ComPtr<IDXGISwapChain4>				_swapchain		= nullptr;

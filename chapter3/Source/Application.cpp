@@ -90,39 +90,6 @@ namespace {
 	}; // 70バイトのはずだが、パディングにより72バイトになる
 #pragma pack()//1バイトパッキング解除
 	static_assert(sizeof(PMDMaterial) == 70, "assertion error.");
-
-
-	//// シェーダー側に投げられるマテリアルデータ
-	//struct MaterialForHlsl {
-	//	XMFLOAT3 diffuse;	// ディヒューズ色
-	//	float alpha;		// ディヒューズα
-	//	XMFLOAT3 specular;	// スペキュラ色
-	//	float specularity;	// スペキュラの強さ（乗算値）
-	//	XMFLOAT3 ambient;	// アンビエント色
-	//};
-
-	//// それ以外のマテリアルデータ
-	//struct AdditionalMaterial {
-	//	std::string texPath;	// テクスチャファイルパス
-	//	int toonIdx;			// トゥーン番号
-	//	bool edgeFlag;			// マテリアルごとの輪郭線フラグ
-	//};
-
-	//// 全体をまとめる
-	//struct Material {
-	//	unsigned int indicesNum;	// インデックス数
-	//	MaterialForHlsl material;
-	//	AdditionalMaterial additional;
-	//};
-
-	//// シェーダー側に渡すための基本的な行列データ
-	//struct SceneData {
-	//	XMMATRIX world;
-	//	XMMATRIX view;
-	//	XMMATRIX proj;
-	//	XMFLOAT3 eye;
-	//};
-
 }
 
 // 関数定義
@@ -392,11 +359,11 @@ void Application::Destroy() {
 
 bool Application::Init() {
 	// ウィンドウ クラス の 生成＆ 登録
-	w.cbSize = sizeof(WNDCLASSEX);
-	w.lpfnWndProc = (WNDPROC)WindowProcedure; // コール バック 関数 の 指定
-	w.lpszClassName = ("DX12Sample"); // アプリケーション クラス 名（ 適当 で よい）
-	w.hInstance = GetModuleHandle(nullptr); // ハンドル の 取得
-	RegisterClassEx(&w); // アプリケーション クラス（ ウィンドウ クラス の 指定 を OS に 伝える）
+	window.cbSize = sizeof(WNDCLASSEX);
+	window.lpfnWndProc = (WNDPROC)WindowProcedure; // コール バック 関数 の 指定
+	window.lpszClassName = L"DX12Sample"; // アプリケーション クラス 名（ 適当 で よい）
+	window.hInstance = GetModuleHandle(nullptr); // ハンドル の 取得
+	RegisterClassEx(&window); // アプリケーション クラス（ ウィンドウ クラス の 指定 を OS に 伝える）
 	RECT wrc = { 0, 0, window_width, window_height };// ウィンドウサイズ を 決める
 
 	// 関数 を 使っ て ウィンドウ の サイズ を 補正 する
@@ -404,8 +371,8 @@ bool Application::Init() {
 
 	// ウィンドウ オブジェクト の 生成
 	HWND hwnd = CreateWindow(
-		w.lpszClassName,// クラス 名 指定
-		("DX12テスト"), // タイトル バー の 文字
+		window.lpszClassName,// クラス 名 指定
+		L"DX12テスト", // タイトル バー の 文字
 		WS_OVERLAPPEDWINDOW, // タイトル バー と 境界線 が ある ウィンドウ
 		CW_USEDEFAULT, // 表示 x 座標 は OS に お 任せ
 		CW_USEDEFAULT, // 表示 y 座標 は OS に お 任せ
@@ -413,7 +380,7 @@ bool Application::Init() {
 		wrc.bottom - wrc.top, // ウィンドウ 高
 		nullptr, // 親 ウィンドウ ハンドル
 		nullptr, // メニュー ハンドル
-		w.hInstance, // 呼び出し アプリケーション ハンドル
+		window.hInstance, // 呼び出し アプリケーション ハンドル
 		nullptr); // 追加 パラメーター
 
 	// ウィンドウ 表示
@@ -678,7 +645,7 @@ bool Application::Init() {
 
 	{
 		// コピー
-		for (int i = 0; i < materialNum; ++i) {
+		for (unsigned int i = 0; i < materialNum; ++i) {
 			materials[i].indicesNum = pmdMaterials[i].indicesNum;
 			materials[i].material.diffuse = pmdMaterials[i].diffuse;
 			materials[i].material.alpha = pmdMaterials[i].alpha;
@@ -688,7 +655,7 @@ bool Application::Init() {
 		}
 
 		// テクスチャ
-		for (int i = 0; i < materialNum; ++i) {
+		for (unsigned int i = 0; i < materialNum; ++i) {
 			if (strlen(pmdMaterials[i].texFilePath) == 0) {
 				textureResources[i] = nullptr;
 				continue;
@@ -833,7 +800,7 @@ bool Application::Init() {
 	blackTex = CreateBlackTexture(_dev.Get());
 	gradTex = CreateGrayGradationTexture(_dev.Get());
 
-	for (int i = 0; i < materialNum; ++i) {
+	for (unsigned int i = 0; i < materialNum; ++i) {
 		// マテリアル用定数バッファビュー
 		_dev->CreateConstantBufferView(&matCBVDesc, matDescHeapHandle);
 
@@ -1382,7 +1349,7 @@ void Application::Run() {
 
 void Application::Terminate() {
 	//もう クラス は 使わ ない ので 登録 解除 する
-	UnregisterClass(w.lpszClassName, w.hInstance);
+	UnregisterClass(window.lpszClassName, window.hInstance);
 
 	DebugOutputFormatString(" Show window test.");
 }
