@@ -88,8 +88,6 @@ public:
 	//----------------------------------------------------
 private:
 	WNDCLASSEX window;
-	Microsoft::WRL::ComPtr<ID3D12Device>				_dev			= nullptr;
-	Microsoft::WRL::ComPtr<IDXGIFactory6>				_dxgiFactory	= nullptr;
 	Microsoft::WRL::ComPtr<IDXGISwapChain4>				_swapchain		= nullptr;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator>		_cmdAllocator	= nullptr;

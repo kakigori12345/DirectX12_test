@@ -379,48 +379,18 @@ bool Application::Init() {
 	ShowWindow(hwnd, SW_SHOW);
 
 	// 各クラスを初期化
-
-
-#ifdef _DEBUG
-	EnableDebugLayer();
-#endif
-
-	// ファクトリー
-#ifdef _DEBUG
-	auto result = CreateDXGIFactory2(
-		DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf()));
-#else
-	auto result = CreateDXGIFactory1(
-		IID_PPV_ARGS(_dxgiFactory.ReleaseAndGetAddressOf()));
-#endif
-
-	// アダプター
-	std::vector <IDXGIAdapter*> adapters; //ここにアダプターを列挙する
-	IDXGIAdapter* tmpAdapter = nullptr;
-	for (int i = 0; _dxgiFactory->EnumAdapters(i, &tmpAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
-		adapters.push_back(tmpAdapter);
-	}
-	// アダプターを識別するための情報を取得（DXGI_ADAPTER＿DESC構造体）
-	for (auto adpt : adapters) {
-		DXGI_ADAPTER_DESC adesc = {};
-		adpt->GetDesc(&adesc); // アダプターの説明オブジェクト取得
-		std::wstring strDesc = adesc.Description;
-
-		// 探したいアダプターの名前を確認
-		if (strDesc.find(L"NVIDIA") != std::string::npos) {
-			tmpAdapter = adpt;
-			break;
-		}
+	Dx12Wrapper* dxWrapper = Dx12Wrapper::Instance();
+	if (!dxWrapper->Init()) {
+		DebugOutputFormatString("Dx12Wrapper の初期化に失敗.");
+		return 0;
 	}
 
-	// デバイスオブジェクト
-	D3D12CreateDevice(
-		tmpAdapter,
-		D3D_FEATURE_LEVEL_12_1,
-		IID_PPV_ARGS(_dev.ReleaseAndGetAddressOf()));
+	// 必要なデバイスを一時的に取得
+	// TODO: ラッパーが完成したらこれらは必要なくなるはずなので消す
+	ID3D12Device* _dev = dxWrapper->GetDevice();
+	IDXGIFactory6* _dxgiFactory = dxWrapper->GetFactory();
 
-
-	result = _dev->CreateCommandAllocator(
+	auto result = _dev->CreateCommandAllocator(
 		D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(_cmdAllocator.ReleaseAndGetAddressOf()));
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Creating CommandAllocator.");
@@ -663,7 +633,7 @@ bool Application::Init() {
 			sprintf_s(toonFileName, "toon%02d.bmp", pmdMaterials[i].toonIdx + 1);
 			toonFilePath += toonFileName;
 
-			toonResources[i] = LoadTextureFromFile(toonFilePath, _dev.Get());
+			toonResources[i] = LoadTextureFromFile(toonFilePath, _dev);
 
 			// 各種テクスチャを読み込む
 			string texFileName = pmdMaterials[i].texFilePath;
@@ -711,15 +681,15 @@ bool Application::Init() {
 			// モデルとテクスチャパスから、プログラムから見たテクスチャパスを取得
 			if (texFileName != "") {
 				auto texFilePath = GetTexturePathFromModelAndTexPath(strModelPath, texFileName.c_str());
-				textureResources[i] = LoadTextureFromFile(texFilePath, _dev.Get());
+				textureResources[i] = LoadTextureFromFile(texFilePath, _dev);
 			}
 			if (sphFileName != "") {
 				auto sphFilePath = GetTexturePathFromModelAndTexPath(strModelPath, sphFileName.c_str());
-				sphResources[i] = LoadTextureFromFile(sphFilePath, _dev.Get());
+				sphResources[i] = LoadTextureFromFile(sphFilePath, _dev);
 			}
 			if (spaFileName != "") {
 				auto spaFilePath = GetTexturePathFromModelAndTexPath(strModelPath, spaFileName.c_str());
-				spaResources[i] = LoadTextureFromFile(spaFilePath, _dev.Get());
+				spaResources[i] = LoadTextureFromFile(spaFilePath, _dev);
 			}
 		}
 	}
@@ -791,9 +761,9 @@ bool Application::Init() {
 	auto matDescHeapHandle = materialDescHeap->GetCPUDescriptorHandleForHeapStart();
 	auto incSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	whiteTex = CreateWhiteTexture(_dev.Get());
-	blackTex = CreateBlackTexture(_dev.Get());
-	gradTex = CreateGrayGradationTexture(_dev.Get());
+	whiteTex = CreateWhiteTexture(_dev);
+	blackTex = CreateBlackTexture(_dev);
+	gradTex = CreateGrayGradationTexture(_dev);
 
 	for (unsigned int i = 0; i < materialNum; ++i) {
 		// マテリアル用定数バッファビュー
@@ -1199,6 +1169,9 @@ bool Application::Init() {
 
 
 void Application::Run() {
+	Dx12Wrapper::Instance()->GetDevice();
+	ID3D12Device* _dev = Dx12Wrapper::Instance()->GetDevice();
+
 	MSG msg = {};
 	HRESULT result;
 

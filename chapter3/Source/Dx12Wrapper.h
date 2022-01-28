@@ -23,7 +23,7 @@ class Dx12Wrapper {
 	//----------------------------------------------------
 private:
 	// シングルトンなので非公開
-	Dx12Wrapper() {};
+	Dx12Wrapper();
 	Dx12Wrapper(const Dx12Wrapper&) = delete;
 	Dx12Wrapper& operator=(const Dx12Wrapper&) = delete;
 public:
@@ -34,17 +34,35 @@ public:
 	static void Destroy();
 	static Dx12Wrapper* Instance();
 
+
 	//----------------------------------------------------
 	// メソッド
 	//----------------------------------------------------
 public:
+	// @brief クラスの初期化
+	// @note このクラスを使用する前に一度必ず呼び出すこと
 	bool Init();
+
+
+	//------------------------------------------------------------------
+	// Dx12関連のオブジェクト取得系
+	// TODO: リファクタできたら必要ない関数ばかりになるので整理する
+	//------------------------------------------------------------------
+	// @brief デバイスを取得
+	ID3D12Device* GetDevice();
+	// @brief ファクトリを取得
+	IDXGIFactory6* GetFactory();
+
 
 	//----------------------------------------------------
 	// メンバ変数
 	//----------------------------------------------------
 private:
+	Microsoft::WRL::ComPtr<ID3D12Device>				m_device;
+	Microsoft::WRL::ComPtr<IDXGIFactory6>				m_dxgiFactory;
+	Microsoft::WRL::ComPtr<IDXGISwapChain4>				m_swapchain;
 
 private:
 	static std::unique_ptr<Dx12Wrapper> s_instance;
+	bool m_isInitialized;
 };
