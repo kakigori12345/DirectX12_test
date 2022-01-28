@@ -22,6 +22,9 @@
 // その他
 #include "Utility.h"
 
+// リファクタ
+#include "Dx12Wrapper.h"
+
 #ifdef _DEBUG 
 #include < iostream >
 #endif
@@ -42,17 +45,6 @@ namespace {
 	// 定数
 	int window_width = 1280;
 	int window_height = 760;
-
-	// 頂点情報
-	struct Vertex {
-		XMFLOAT3 pos;	// xyz 座標
-		XMFLOAT2 uv;	// uv 座標
-	};
-
-	// テクスチャデータ
-	struct TexRGBA {
-		unsigned char R, G, B, A;
-	};
 
 	// PMD ヘッダ構造体
 	struct PMDHeader {
@@ -385,6 +377,9 @@ bool Application::Init() {
 
 	// ウィンドウ 表示
 	ShowWindow(hwnd, SW_SHOW);
+
+	// 各クラスを初期化
+
 
 #ifdef _DEBUG
 	EnableDebugLayer();
