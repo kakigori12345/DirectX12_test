@@ -14,25 +14,11 @@
 //ComPtr
 #include <wrl.h>
 
+#include "Util/SingletonDef.h"
+
 
 class Dx12Wrapper {
-	//----------------------------------------------------
-	// コンストラクタ関連
-	//----------------------------------------------------
-private:
-	// シングルトンなので非公開
-	Dx12Wrapper();
-	Dx12Wrapper(const Dx12Wrapper&) = delete;
-	Dx12Wrapper& operator=(const Dx12Wrapper&) = delete;
-public:
-	~Dx12Wrapper() {};
-public:
-	// シングルトン用関数
-	static void Create();
-	static void Destroy();
-	static Dx12Wrapper* Instance();
-
-
+	SINGLETON_HEADER(Dx12Wrapper)
 	//----------------------------------------------------
 	// メソッド
 	//----------------------------------------------------
@@ -84,5 +70,4 @@ private:
 
 private:
 	bool m_isInitialized;
-	static std::unique_ptr<Dx12Wrapper> s_instance;
 };

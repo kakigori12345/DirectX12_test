@@ -9,6 +9,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source\Util">
+      <UniqueIdentifier>{f30fbcde-6503-4d05-8ead-dab307786b40}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Utility.h">
@@ -28,6 +31,9 @@
     </ClInclude>
     <ClInclude Include="Source\PreCompileHeader.h">
       <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Util\SingletonDef.h">
+      <Filter>Source\Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -26,15 +26,10 @@ PMDRenderer::PMDRenderer() {
 
 }
 
-// シングルトン関連
-std::unique_ptr<PMDRenderer> PMDRenderer::s_instance = nullptr;
-PMDRenderer* PMDRenderer::Instance() {
-	assert(s_instance);
-	return s_instance.get();
+//! @brief デストラクタ
+PMDRenderer::~PMDRenderer() {
+
 }
-void PMDRenderer::Create() {
-	s_instance = unique_ptr<PMDRenderer>(new PMDRenderer());
-}
-void PMDRenderer::Destroy() {
-	s_instance.reset();
-}
+
+// シングルトン
+SINGLETON_CPP(PMDRenderer)

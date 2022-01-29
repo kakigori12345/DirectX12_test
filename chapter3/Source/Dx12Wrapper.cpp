@@ -43,18 +43,13 @@ Dx12Wrapper::Dx12Wrapper()
 	, m_isInitialized(false)
 {}
 
-// シングルトン関連
-std::unique_ptr<Dx12Wrapper> Dx12Wrapper::s_instance = nullptr;
-Dx12Wrapper* Dx12Wrapper::Instance() {
-	assert(s_instance);
-	return s_instance.get();
+// @brief デストラクタ
+Dx12Wrapper::~Dx12Wrapper() {
+
 }
-void Dx12Wrapper::Create() {
-	s_instance = unique_ptr<Dx12Wrapper>(new Dx12Wrapper());
-}
-void Dx12Wrapper::Destroy() {
-	s_instance.reset();
-}
+
+// シングルトン
+SINGLETON_CPP(Dx12Wrapper)
 
 
 

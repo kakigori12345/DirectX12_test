@@ -166,6 +166,7 @@
     <ClInclude Include="Source\PMDRenderer.h" />
     <ClInclude Include="Source\PreCompileHeader.h" />
     <ClInclude Include="Source\Utility.h" />
+    <ClInclude Include="Source\Util\SingletonDef.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resource\BasicPixelShader.hlsl">

@@ -17,6 +17,8 @@
 //ComPtr
 #include <wrl.h>
 
+#include "Util/SingletonDef.h"
+
 
 //-----------------------------------------------------------------
 // Type Definition
@@ -56,26 +58,12 @@ struct SceneData {
 
 //! アプリケーションクラス（シングルトン）
 class Application {
-	//----------------------------------------------------
-	// コンストラクタ関連
-	//----------------------------------------------------
-private:
-	// シングルトンなので非公開
-	Application() {};
-	Application(const Application&) = delete;
-	Application& operator=(const Application&) = delete;
-public:
-	~Application() {};
-public:
-	// シングルトン用初期化関数
-	static void Create();
-	static void Destroy();
-
+	SINGLETON_HEADER(Application)
 	//----------------------------------------------------
 	// メソッド
 	//----------------------------------------------------
 public:
-	static Application* Instance();
+	//static Application* Instance();
 
 	bool Init();
 
@@ -133,7 +121,4 @@ private:
 	DirectX::XMMATRIX									worldMat;
 	DirectX::XMMATRIX									viewMat;
 	DirectX::XMMATRIX									projMat;
-
-private:
-	static std::unique_ptr<Application> s_instance;
 };

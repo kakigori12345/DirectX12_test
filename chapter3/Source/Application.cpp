@@ -315,20 +315,19 @@ namespace {
 // Method Definition
 //-----------------------------------------------------------------
 
-std::unique_ptr<Application> Application::s_instance = nullptr;
+//! @brief コンストラクタ
+Application::Application() {
 
-Application* Application::Instance() {
-	assert(s_instance);
-	return s_instance.get();
 }
 
-void Application::Create() {
-	s_instance = unique_ptr<Application>(new Application());
+//! @brief デストラクタ
+Application::~Application() {
+
 }
 
-void Application::Destroy() {
-	s_instance.reset();
-}
+// シングルトン
+SINGLETON_CPP(Application)
+
 
 bool Application::Init() {
 	HRESULT result = S_OK;
