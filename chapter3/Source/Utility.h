@@ -36,3 +36,10 @@ std::string GetExtension(const std::string& path);
 std::pair<std::string, std::string> SplitFileName(
 	const std::string& path, const char splitter = '*'
 );
+
+
+// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
+	// @param format フォーマット（% d とか% f とか の） 
+	// @param 可変 長 引数 
+	// @remarks この 関数 は デバッグ 用 です。 デバッグ 時 にしか 動作 し ませ ん
+void DebugOutputFormatString(const char* format, ...);

@@ -164,7 +164,7 @@
     <ClInclude Include="Source\Dx12Wrapper.h" />
     <ClInclude Include="Source\PMDActor.h" />
     <ClInclude Include="Source\PMDRenderer.h" />
-    <ClInclude Include="Source\PreCompileHeader.pch" />
+    <ClInclude Include="Source\PreCompileHeader.h" />
     <ClInclude Include="Source\Utility.h" />
   </ItemGroup>
   <ItemGroup>

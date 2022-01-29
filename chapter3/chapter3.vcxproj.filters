@@ -26,7 +26,7 @@
     <ClInclude Include="Source\Application.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="Source\PreCompileHeader.pch">
+    <ClInclude Include="Source\PreCompileHeader.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

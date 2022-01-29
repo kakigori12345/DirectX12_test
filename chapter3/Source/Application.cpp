@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------
 // File Include
 //-----------------------------------------------------------------
-#include "PreCompileHeader.pch"
+#include "PreCompileHeader.h"
 #include "Application.h"
 
 // Windows
@@ -9,26 +9,19 @@
 #include <map>
 
 // Direct3D
-#pragma comment( lib, "d3d12.lib")
-#pragma comment( lib, "dxgi.lib")
+//#pragma comment( lib, "d3d12.lib")
 
 // シェーダーのコンパイル
 #include <d3dcompiler.h>
-#pragma comment( lib, "d3dcompiler.lib")
 
 // DirectXTexライブラリ
 #include <DirectXTex.h>
-#pragma comment(lib, "DirectXTex.lib")
 
 // その他
 #include "Utility.h"
 
 // リファクタ
 #include "Dx12Wrapper.h"
-
-#ifdef _DEBUG 
-#include < iostream >
-#endif
 
 
 //-----------------------------------------------------------------
@@ -87,19 +80,6 @@ namespace {
 
 // 関数定義
 namespace {
-	// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
-	// @param format フォーマット（% d とか% f とか の） 
-	// @param 可変 長 引数 
-	// @remarks この 関数 は デバッグ 用 です。 デバッグ 時 にしか 動作 し ませ ん
-	void DebugOutputFormatString(const char* format, ...) {
-#ifdef _DEBUG
-		va_list valist;
-		va_start(valist, format);
-		vprintf_s(format, valist);
-		va_end(valist);
-#endif
-	}
-
 	// 面倒 だ けど 書か なけれ ば いけ ない 関数
 	LRESULT WindowProcedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 		// ウィンドウ が 破棄 さ れ たら 呼ば れる
@@ -432,6 +412,14 @@ bool Application::Init() {
 		// ハンドルを一つずらす
 		handle.ptr += _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	}
+
+
+
+
+
+	//---------------------------------------------------------
+	// ここから↓がモデルごとの処理かな
+	//---------------------------------------------------------
 
 
 	// PMD の読み込み
@@ -789,6 +777,12 @@ bool Application::Init() {
 		matDescHeapHandle.ptr += incSize;
 	}
 
+
+
+
+	//------------------------------------------------------
+	// ここから↓がレンダラーの仕事な気がする
+	//------------------------------------------------------
 
 	// シェーダーリソースビュー
 	D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc = {};

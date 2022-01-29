@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------
 // File Include
 //-----------------------------------------------------------------
-#include "PreCompileHeader.pch"
+#include "PreCompileHeader.h"
 #include "Utility.h"
 
 #include <Windows.h>
@@ -25,9 +25,9 @@ std::string GetTexturePathFromModelAndTexPath(
 	const char* texPath
 ) {
 	// フォルダ区切り両方対応
-	int pathIndex1 = modelPath.rfind('/');
-	int pathIndex2 = modelPath.rfind('\\');
-	int pathIndex = max(pathIndex1, pathIndex2);
+	const int pathIndex1 = modelPath.rfind('/');
+	const int pathIndex2 = modelPath.rfind('\\');
+	const int pathIndex = max(pathIndex1, pathIndex2);
 
 	std::string folderPath = modelPath.substr(0, pathIndex);
 	return folderPath + '/' + texPath;
@@ -87,4 +87,18 @@ std::pair<std::string, std::string> SplitFileName(
 	retval.second = path.substr(idx + 1, path.length() - idx - 1);
 
 	return retval;
+}
+
+
+// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
+	// @param format フォーマット（% d とか% f とか の） 
+	// @param 可変 長 引数 
+	// @remarks この 関数 は デバッグ 用 です。 デバッグ 時 にしか 動作 し ませ ん
+void DebugOutputFormatString(const char* format, ...) {
+#ifdef _DEBUG
+	va_list valist;
+	va_start(valist, format);
+	vprintf_s(format, valist);
+	va_end(valist);
+#endif
 }

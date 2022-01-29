@@ -88,11 +88,6 @@ public:
 	//----------------------------------------------------
 private:
 	WNDCLASSEX window;
-	/*Microsoft::WRL::ComPtr<IDXGISwapChain4>				_swapchain		= nullptr;*/
-
-	/*Microsoft::WRL::ComPtr<ID3D12CommandAllocator>		_cmdAllocator	= nullptr;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	_cmdList		= nullptr;
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue>			_cmdQueue		= nullptr;*/
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		rtvHeaps		= nullptr;
 	std::vector<ID3D12Resource*>						_backBuffers;

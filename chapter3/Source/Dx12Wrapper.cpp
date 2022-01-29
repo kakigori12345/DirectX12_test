@@ -1,35 +1,19 @@
 //-----------------------------------------------------------------
 // File Include
 //-----------------------------------------------------------------
-#include "PreCompileHeader.pch"
+#include "PreCompileHeader.h"
 #include "Dx12Wrapper.h"
-
-// Direct3D
-#pragma comment( lib, "d3d12.lib")
-#pragma comment( lib, "dxgi.lib")
-
-// シェーダーのコンパイル
-#include <d3dcompiler.h>
-#pragma comment( lib, "d3dcompiler.lib")
-
-// DirectXTexライブラリ
-#include <DirectXTex.h>
-#pragma comment(lib, "DirectXTex.lib")
 
 // その他
 #include "Utility.h"
 #include <assert.h>
-
-#ifdef _DEBUG 
-#include < iostream >
-#endif
 
 
 //-----------------------------------------------------------------
 // Namespace Depend
 //-----------------------------------------------------------------
 using namespace std;
-using namespace DirectX;
+//using namespace DirectX;
 using namespace Microsoft::WRL;
 
 
@@ -37,19 +21,6 @@ using namespace Microsoft::WRL;
 // Method Definition
 //-----------------------------------------------------------------
 namespace {
-	// @brief コンソール 画面 に フォーマット 付き 文字列 を 表示 
-	// @param format フォーマット（% d とか% f とか の） 
-	// @param 可変 長 引数 
-	// @remarks この 関数 は デバッグ 用 です。 デバッグ 時 にしか 動作 し ませ ん
-	void DebugOutputFormatString(const char* format, ...) {
-#ifdef _DEBUG
-		va_list valist;
-		va_start(valist, format);
-		vprintf_s(format, valist);
-		va_end(valist);
-#endif
-	}
-
 	// @brief デバッグレイヤーの有効化
 	void EnableDebugLayer() {
 		ID3D12Debug* debugLayer = nullptr;
