@@ -2,13 +2,13 @@
 // File Include
 //-----------------------------------------------------------------
 #include "PreCompileHeader.h"
-#include "PMDRenderer.h"
+#include "PMD/PMDRenderer.h"
 
 #include <d3dcompiler.h>
 //#include <DirectXTex.h>
 
 // ‚»‚Ì‘¼
-#include "Utility.h"
+#include "Util/Utility.h"
 #include <assert.h>
 
 

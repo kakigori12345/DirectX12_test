@@ -12,18 +12,12 @@
     <Filter Include="Source\Util">
       <UniqueIdentifier>{f30fbcde-6503-4d05-8ead-dab307786b40}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\PMD">
+      <UniqueIdentifier>{841101a3-2ac7-439a-b48e-07e7c0f21943}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Utility.h">
-      <Filter>Source</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Dx12Wrapper.h">
-      <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\PMDRenderer.h">
-      <Filter>Source</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\PMDActor.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\Application.h">
@@ -34,6 +28,15 @@
     </ClInclude>
     <ClInclude Include="Source\Util\SingletonDef.h">
       <Filter>Source\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Util\Utility.h">
+      <Filter>Source\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PMD\PMDActor.h">
+      <Filter>Source\PMD</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PMD\PMDRenderer.h">
+      <Filter>Source\PMD</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -56,17 +59,17 @@
     <ClCompile Include="Source\Dx12Wrapper.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Source\PMDRenderer.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\PMDActor.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Application.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Utility.cpp">
-      <Filter>Source</Filter>
+    <ClCompile Include="Source\Util\Utility.cpp">
+      <Filter>Source\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PMD\PMDActor.cpp">
+      <Filter>Source\PMD</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\PMD\PMDRenderer.cpp">
+      <Filter>Source\PMD</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

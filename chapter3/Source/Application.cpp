@@ -18,7 +18,7 @@
 #include <DirectXTex.h>
 
 // その他
-#include "Utility.h"
+#include "Util/Utility.h"
 
 // リファクタ
 #include "Dx12Wrapper.h"

@@ -2,7 +2,7 @@
 // File Include
 //-----------------------------------------------------------------
 #include "PreCompileHeader.h"
-#include "Utility.h"
+#include "Util/Utility.h"
 
 #include <Windows.h>
 #include <assert.h>
