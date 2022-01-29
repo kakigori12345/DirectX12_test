@@ -89,6 +89,8 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)Source;$(ProjectDir)Source;C:\Users\e1212\Desktop\directX12\DirectX12_test\DirectXTex\DirectXTex</AdditionalIncludeDirectories>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,6 +133,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\Users\e1212\Desktop\directX12\DirectX12_test\DirectXTex\DirectXTex\Bin\Desktop_2019_Win10\x64\Debug</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -161,6 +164,7 @@
     <ClInclude Include="Source\Dx12Wrapper.h" />
     <ClInclude Include="Source\PMDActor.h" />
     <ClInclude Include="Source\PMDRenderer.h" />
+    <ClInclude Include="Source\PreCompileHeader.pch" />
     <ClInclude Include="Source\Utility.h" />
   </ItemGroup>
   <ItemGroup>

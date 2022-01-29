@@ -1,3 +1,5 @@
+#include "PreCompileHeader.pch"
+
 #include "Application.h"
 #include "Dx12Wrapper.h"
 

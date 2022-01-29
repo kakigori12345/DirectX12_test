@@ -1,6 +1,7 @@
 //-----------------------------------------------------------------
 // File Include
 //-----------------------------------------------------------------
+#include "PreCompileHeader.pch"
 #include "Application.h"
 
 // Windows
@@ -350,6 +351,8 @@ void Application::Destroy() {
 }
 
 bool Application::Init() {
+	HRESULT result = S_OK;
+
 	// ウィンドウ クラス の 生成＆ 登録
 	window.cbSize = sizeof(WNDCLASSEX);
 	window.lpfnWndProc = (WNDPROC)WindowProcedure; // コール バック 関数 の 指定
@@ -378,9 +381,10 @@ bool Application::Init() {
 	// ウィンドウ 表示
 	ShowWindow(hwnd, SW_SHOW);
 
+
 	// 各クラスを初期化
 	Dx12Wrapper* dxWrapper = Dx12Wrapper::Instance();
-	if (!dxWrapper->Init()) {
+	if (!dxWrapper->Init(hwnd)) {
 		DebugOutputFormatString("Dx12Wrapper の初期化に失敗.");
 		return 0;
 	}
@@ -389,65 +393,8 @@ bool Application::Init() {
 	// TODO: ラッパーが完成したらこれらは必要なくなるはずなので消す
 	ID3D12Device* _dev = dxWrapper->GetDevice();
 	IDXGIFactory6* _dxgiFactory = dxWrapper->GetFactory();
+	IDXGISwapChain4* _swapchain = dxWrapper->GetSwapchain();
 
-	auto result = _dev->CreateCommandAllocator(
-		D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(_cmdAllocator.ReleaseAndGetAddressOf()));
-	if (result != S_OK) {
-		DebugOutputFormatString("Missed at Creating CommandAllocator.");
-		return 0;
-	}
-
-	result = _dev->CreateCommandList(
-		0,
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		_cmdAllocator.Get(),
-		nullptr,
-		IID_PPV_ARGS(_cmdList.ReleaseAndGetAddressOf()));
-	if (result != S_OK) {
-		DebugOutputFormatString("Missed at Creating CommandList.");
-		return 0;
-	}
-
-	// キューの作成
-	D3D12_COMMAND_QUEUE_DESC cmdQueueDesc = {};
-	cmdQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE; //タイムアウトなし
-	cmdQueueDesc.NodeMask = 0; //アダプター一つなので０でいい（らしい）
-	cmdQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-	cmdQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	// 生成
-	result = _dev->CreateCommandQueue(&cmdQueueDesc, IID_PPV_ARGS(_cmdQueue.ReleaseAndGetAddressOf()));
-	if (result != S_OK) {
-		DebugOutputFormatString("Missed at Creating CommandQueue.");
-		return 0;
-	}
-
-	// スワップチェーンの作成
-	DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
-
-	swapchainDesc.Width = window_width;
-	swapchainDesc.Height = window_height;
-	swapchainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapchainDesc.Stereo = false;
-	swapchainDesc.SampleDesc.Count = 1;
-	swapchainDesc.SampleDesc.Quality = 0;
-	swapchainDesc.BufferUsage = DXGI_USAGE_BACK_BUFFER;
-	swapchainDesc.BufferCount = 2;
-	swapchainDesc.Scaling = DXGI_SCALING_STRETCH; // バックバッファーは伸び縮み可能
-	swapchainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // フリップ後は速やかに破棄
-	swapchainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-	swapchainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // ウィンドウ⇔フルスクリーン切り替え可能
-
-	result = _dxgiFactory->CreateSwapChainForHwnd(
-		_cmdQueue.Get(),
-		hwnd,
-		&swapchainDesc,
-		nullptr,
-		nullptr,
-		(IDXGISwapChain1**)_swapchain.ReleaseAndGetAddressOf());
-	if (result != S_OK) {
-		DebugOutputFormatString("Missed at Creating SwapChain.");
-		return 0;
-	}
 
 	// ディスクリプタヒープの作成
 	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -468,9 +415,9 @@ bool Application::Init() {
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;	//ガンマ補正あり
 	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	// スワップチェーンとビューの関連付け
-	_backBuffers.resize(swapchainDesc.BufferCount);
+	_backBuffers.resize(COMMAND_BUFFER_COUNT);
 	D3D12_CPU_DESCRIPTOR_HANDLE handle = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
-	for (UINT idx = 0; idx < swapchainDesc.BufferCount; ++idx) {
+	for (UINT idx = 0; idx < COMMAND_BUFFER_COUNT; ++idx) {
 		result = _swapchain->GetBuffer(idx, IID_PPV_ARGS(&_backBuffers[idx]));
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Getting BackBuffer.");
@@ -1169,11 +1116,12 @@ bool Application::Init() {
 
 
 void Application::Run() {
-	Dx12Wrapper::Instance()->GetDevice();
-	ID3D12Device* _dev = Dx12Wrapper::Instance()->GetDevice();
+	Dx12Wrapper* dxWrapper = Dx12Wrapper::Instance();
+	ID3D12Device* _dev = dxWrapper->GetDevice();
+	IDXGISwapChain4* _swapchain = dxWrapper->GetSwapchain();
+	ID3D12GraphicsCommandList* _cmdList = dxWrapper->GetCommandList();
 
 	MSG msg = {};
-	HRESULT result;
 
 	while (true) {
 		{ // 行列計算
@@ -1187,7 +1135,7 @@ void Application::Run() {
 
 		// 2.レンダーターゲットをバックバッファにセット
 		// 現在のバックバッファを取得
-		UINT bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
+		SIZE_T bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
 
 		// リソースバリアでバッファの使い道を GPU に通知する
 		D3D12_RESOURCE_BARRIER BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -1252,55 +1200,16 @@ void Application::Run() {
 		// 4.レンダーターゲットをクローズ
 		_cmdList->Close();
 
-		// 5.たまったコマンドをコマンドリストに投げる
-		// コマンドリスト実行
-		ID3D12CommandList* cmdLists[] = { _cmdList.Get() };
-		_cmdQueue->ExecuteCommandLists(1, cmdLists);
-		// フェンスを作成しておく
-		ComPtr<ID3D12Fence> _fence = nullptr;
-		UINT64 _fenceVal = 0;
-		result = _dev->CreateFence(_fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(_fence.ReleaseAndGetAddressOf()));
-		// GPUの処理が完了するまで待つ
-		_cmdQueue->Signal(_fence.Get(), ++_fenceVal);
-		if (_fence->GetCompletedValue() != _fenceVal) {
-			// イベントハンドルを取得
-			auto event = CreateEvent(nullptr, false, false, nullptr);
-			if (event == nullptr) {
-				DebugOutputFormatString("Missed at Creating Event.");
-				break;
-			}
 
-			_fence->SetEventOnCompletion(_fenceVal, event);
-
-			// イベントが発生するまで待機
-			WaitForSingleObject(event, INFINITE);
-
-			// イベントハンドルを閉じる
-			CloseHandle(event);
-		}
-		while (_fence->GetCompletedValue() != _fenceVal) { ; }
-		// クリア
-		result = _cmdAllocator->Reset();
-		if (result != S_OK) {
-			DebugOutputFormatString("Missed at Reset Allocator.");
-			break;
-		}
-		result = _cmdList->Reset(_cmdAllocator.Get(), nullptr);
-		if (result != S_OK) {
-			DebugOutputFormatString("Missed at Reset CommandList.");
-			break;
-		}
+		dxWrapper->ExecuteCommandList();
+		dxWrapper->ResetCommandList();
 
 		// 6.スワップチェーンのフリップ処理
 		// 状態遷移
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
-		result = _swapchain->Present(1, 0);
-		if (result != S_OK) {
-			DebugOutputFormatString("Missed at Present Swapchain.");
-			break;
-		}
+		dxWrapper->SwapchainPresent();
 
 
 		// メッセージ処理
