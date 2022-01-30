@@ -61,7 +61,8 @@ namespace {
 //-----------------------------------------------------------------
 
 //! @brief コンストラクタ
-Application::Application() {
+Application::Application()
+	: window{} {
 
 }
 
@@ -249,7 +250,8 @@ void Application::Run() {
 
 		// メッセージ処理
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg); DispatchMessage(&msg);
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
 		}
 
 		//アプリケーション が 終わる とき に message が WM_QUIT に なる
