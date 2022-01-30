@@ -41,6 +41,9 @@
     <ClInclude Include="Source\PMD\PMDDef.h">
       <Filter>Source\PMD</Filter>
     </ClInclude>
+    <ClInclude Include="Source\PMD\VertexLayoutDef.h">
+      <Filter>Source\PMD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resource\BasicPixelShader.hlsl">

@@ -7,6 +7,8 @@
 
 #include <d3d12.h>
 
+#include <wrl.h>
+
 
 class PMDRenderer {
 	SINGLETON_HEADER(PMDRenderer)
@@ -23,5 +25,15 @@ public:
 	// メンバ変数
 	//----------------------------------------------------
 private:
-	// TODO: シェーダーの生成をDx12ラッパーから移植する
+	bool m_isInitialized;
+
+private:
+public: //TODO: リファクタ後にprivateにする
+	Microsoft::WRL::ComPtr<ID3D12RootSignature>			rootSignature;
+	Microsoft::WRL::ComPtr<ID3DBlob>					rootSigBlob;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState>			_pipelinestate;
+
+	Microsoft::WRL::ComPtr<ID3DBlob>					_vsBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob>					_psBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob>					errorBlob;
 };

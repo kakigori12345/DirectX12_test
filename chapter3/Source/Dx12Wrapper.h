@@ -87,10 +87,6 @@ public: //一時的にpublicにしておく。TODO:リファクタ後はprivateにしておく
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		rtvHeaps;
 	std::vector<ID3D12Resource*>						_backBuffers;
 
-	Microsoft::WRL::ComPtr<ID3DBlob>					_vsBlob;
-	Microsoft::WRL::ComPtr<ID3DBlob>					_psBlob;
-	Microsoft::WRL::ComPtr<ID3DBlob>					errorBlob;
-
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		basicDescHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource>				constBuff;
 
@@ -98,4 +94,7 @@ public: //一時的にpublicにしておく。TODO:リファクタ後はprivateにしておく
 
 	Microsoft::WRL::ComPtr<ID3D12Resource>				depthBuffer;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		dsvHeap;
+
+	CD3DX12_VIEWPORT									viewport;
+	D3D12_RECT											scissorrect;
 };

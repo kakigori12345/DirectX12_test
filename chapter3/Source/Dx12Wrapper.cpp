@@ -43,19 +43,17 @@ Dx12Wrapper::Dx12Wrapper()
 	, m_cmdQueue(nullptr)
 	, rtvHeaps(nullptr)
 	, _backBuffers()
-	, _vsBlob(nullptr)
-	, _psBlob(nullptr)
-	, errorBlob(nullptr)
 	, basicDescHeap(nullptr)
 	, constBuff(nullptr)
 	, mapMatrix(nullptr)
 	, depthBuffer(nullptr)
 	, dsvHeap(nullptr)
-{}
+	, viewport()
+	, scissorrect(){
+}
 
 // @brief デストラクタ
 Dx12Wrapper::~Dx12Wrapper() {
-
 }
 
 // シングルトン
@@ -255,48 +253,6 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 		m_device->CreateConstantBufferView(&cbvDesc, basicHeapHandle);
 	}
 
-
-	{// シェーダーの読み込みと生成
-		result = D3DCompileFromFile(
-			L"Resource/BasicVertexShader.hlsl",
-			nullptr,
-			D3D_COMPILE_STANDARD_FILE_INCLUDE,
-			"BasicVS",
-			"vs_5_0",
-			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
-			0,
-			&_vsBlob,
-			&errorBlob);
-		if (result != S_OK) {
-			DebugOutputFormatString("Missed at Compiling Vertex Shader.");
-			return false;
-		}
-
-		result = D3DCompileFromFile(
-			L"Resource/BasicPixelShader.hlsl",
-			nullptr,
-			D3D_COMPILE_STANDARD_FILE_INCLUDE,
-			"BasicPS",
-			"ps_5_0",
-			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
-			0,
-			&_psBlob,
-			&errorBlob);
-		if (result != S_OK) {
-			// 詳細なエラー表示
-			std::string errstr;
-			errstr.resize(errorBlob->GetBufferSize());
-			std::copy_n(
-				(char*)errorBlob->GetBufferPointer(),
-				errorBlob->GetBufferSize(),
-				errstr.begin());
-			OutputDebugStringA(errstr.c_str());
-
-			DebugOutputFormatString("Missed at Compiling Pixel Shader.");
-			return false;
-		}
-	}
-
 	{// 深度バッファの作成
 		D3D12_RESOURCE_DESC depthResDesc = {};
 		depthResDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -352,6 +308,14 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 			&dsvDesc,
 			dsvHeap->GetCPUDescriptorHandleForHeapStart()
 		);
+	}
+
+	{// ビューポートとシザー矩形
+		viewport = CD3DX12_VIEWPORT{ _backBuffers[0] };
+		scissorrect.top = 0;
+		scissorrect.left = 0;
+		scissorrect.right = scissorrect.left + wInfo.width;
+		scissorrect.bottom = scissorrect.top + wInfo.height;
 	}
 
 	m_isInitialized = true;

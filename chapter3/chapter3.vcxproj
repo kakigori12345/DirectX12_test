@@ -165,6 +165,7 @@
     <ClInclude Include="Source\PMD\PMDActor.h" />
     <ClInclude Include="Source\PMD\PMDDef.h" />
     <ClInclude Include="Source\PMD\PMDRenderer.h" />
+    <ClInclude Include="Source\PMD\VertexLayoutDef.h" />
     <ClInclude Include="Source\PreCompileHeader.h" />
     <ClInclude Include="Source\Util\SingletonDef.h" />
     <ClInclude Include="Source\Util\Utility.h" />

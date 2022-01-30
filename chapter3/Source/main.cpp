@@ -12,12 +12,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// シングルトンの初期化 TODO:シングルトンの初期化する処理は別関数にまとめたい
 	Application::Create();
 	Dx12Wrapper::Create();
-	PMDRenderer::Create();
 
 	Application* app = Application::Instance();
 	if (!app->Init()) {
 		return -1;
 	}
+
+	PMDRenderer::Create();
+
 	app->Run();
 	app->Terminate();
 
