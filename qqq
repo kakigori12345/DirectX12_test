@@ -1,0 +1,466 @@
+[33mcommit 3ee2fbdf8aa2a95b49ec18f4561f6d4055fbd0d2[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 29 17:34:27 2022 +0900
+
+    ファイル階層を整える
+
+[33mcommit 0863c51fe66cfe9b8df718ec56c9b0f24c887372[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 29 17:27:11 2022 +0900
+
+    シングルトンの共通書式をまとめておく
+
+[33mcommit ae46ae37f99436a20c8e7b1b858ab992dacba7c1[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 29 16:53:56 2022 +0900
+
+    PMDRenderer クラスの型を作成
+
+[33mcommit 52ffe843f4efd80b9d77c2cdff44ba06f1b3ab0e[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 29 13:07:15 2022 +0900
+
+    スワップチェーンやコマンドリストをラッパーに移植
+
+[33mcommit 7092a54ff260ce74687e43d1b91e51487a42b3ed[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Fri Jan 28 10:08:41 2022 +0900
+
+    デバイスとファクトリだけ移植
+
+[33mcommit 30bf1d4e9b7cdab7ca5ef5501a73e96587ebdb29[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Fri Jan 28 09:28:18 2022 +0900
+
+    Dx12Wrapper クラスのシングルトン化を行う
+    
+    APplication クラスからの移植作業は何もしていない状態
+
+[33mcommit 0a218544205725b641a10e0d91bfbd2f2a3e89f7[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 15 23:02:52 2022 +0900
+
+    必要ないコード削除と細かな修正
+
+[33mcommit cc3b6b1d70498f8fd2e48f90608164e789e78c30[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 15 22:16:24 2022 +0900
+
+    必要ないファイルを削除
+
+[33mcommit 3ea1f3854524854904dc7354f84d2e2b11c59a51[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 15 22:15:50 2022 +0900
+
+    Applicationクラスにmainの処理を移す
+
+[33mcommit 00b10d326129d7ea3306e7ca819aeaa4f6e2eec6[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Fri Jan 14 23:03:25 2022 +0900
+
+    ComPtr を使ってポインタをラップ
+
+[33mcommit f06f24dac39a191e8fd402dded9d6fb7872d5229[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Fri Jan 14 08:46:47 2022 +0900
+
+    CD3DX12の便利なヘルパー関数で処理を簡略化
+
+[33mcommit ea3669b770339f0864ee75c869d53ec095c184ff[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Fri Jan 14 07:44:17 2022 +0900
+
+    トゥーンシェーディングを実装
+
+[33mcommit 90bbf254dfeb6826c7a49a4ba063a4b9d82d4c6c[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Thu Jan 13 08:22:24 2022 +0900
+
+    スペキュラ・アンビエントを実装
+
+[33mcommit 783f7ec4e2044ae9ec5e68c917c10d2157c42999[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Wed Jan 12 22:31:14 2022 +0900
+
+    アンビエント追加　途中
+
+[33mcommit 90fe5384e7e9ad9cd05e9f3691005eae9bca4080[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Wed Jan 12 21:50:28 2022 +0900
+
+    spaファイルの読み込みを実装
+
+[33mcommit c4e6eebcfa3d35a4b5ce4219f1629da77a42cd91[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Wed Jan 12 20:43:35 2022 +0900
+
+    sph ファイルの読み込みを実装
+
+[33mcommit e82993c6e9f722286fdcf4b0ef31778d5cd1539e[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Jan 11 22:51:58 2022 +0900
+
+    目のテクスチャが表示されない不具合を対応
+
+[33mcommit e6bc5a340892612c7107019f94c3ccd27f91d636[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Jan 11 22:32:51 2022 +0900
+
+    PMDモデルのテクスチャを読み込む
+
+[33mcommit 5f3d5c193cfc14b1bf8c21be81ee16fc43811762[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Jan 11 20:20:27 2022 +0900
+
+    マテリアルの表示不具合を修正
+
+[33mcommit 324378f24d55077b673af37163c81302f8349df6[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Jan 10 18:23:58 2022 +0900
+
+    警告を完全に消す
+
+[33mcommit be28361ee64feb833f4b555795963e6d35a30d46[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Jan 10 17:53:50 2022 +0900
+
+    warning を解消（残り一つ）。現状マテリアルが正常に表示されていない
+
+[33mcommit af43aca78f2da1e2b0446e15f59d2ceeee8bcf95[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Jan 10 17:31:47 2022 +0900
+
+    マテリアルの個別表示
+
+[33mcommit 729c03d2d6e4a194b1d93af02f3e9d0c3476cc17[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Jan 10 16:16:01 2022 +0900
+
+    モデルが表示されないバグを修正
+
+[33mcommit 77eb58b56581cfc08863658aad1e991ff6b0d182[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Jan 10 16:04:05 2022 +0900
+
+    マテリアル途中
+
+[33mcommit dec04a711092d12eaf2097108d6d4f379a18fca9[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Jan 9 18:22:16 2022 +0900
+
+    法線ベクトルをワールド変換
+
+[33mcommit 1fbf0bd915bf427cd97f3f1b60d17dea5e65092d[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Jan 9 18:03:23 2022 +0900
+
+    法線ベクトルを色として表現
+
+[33mcommit c08db7388fbbc1d433206ddbbbd6bd13a936783e[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Jan 9 14:25:42 2022 +0900
+
+    初音ミクモデルを表示
+
+[33mcommit 5b0a203367d266542f06812ea3d541a4f2241026[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 8 22:04:06 2022 +0900
+
+    PMD モデルのデータを追加
+
+[33mcommit 8dc64e5f73c866245436a86b20341153ab428592[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 8 21:47:05 2022 +0900
+
+    ワールド行列で画像を回転させる
+
+[33mcommit 998386ffd735eb50d4485dbc7f9233e394463108[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 8 21:27:23 2022 +0900
+
+    ２D座標変換
+
+[33mcommit bce5f47915f57d08d33b219dd13ca78433c73d28[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 8 18:53:52 2022 +0900
+
+    定数バッファを作成してGPUに送り込む
+
+[33mcommit b5945cf51a94032cc4b0385d71a1dc4a9fce79a3[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 8 17:54:55 2022 +0900
+
+    d3dx12 ライブラリを使用してコード量を削減
+
+[33mcommit d711ffdea9d41f6bb38a88a68faa7bf847118833[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Jan 8 13:42:33 2022 +0900
+
+    画像テクスチャの読み込みを実装
+
+[33mcommit a680782ed9594d4817d37490dc5ae12c2c259a12[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Thu Jan 6 22:41:41 2022 +0900
+
+    fix: 描画時の設定を毎フレームの処理に変更
+
+[33mcommit 3265786c0804682d573ce1dccbe9eebad7f10be7[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Thu Jan 6 22:21:19 2022 +0900
+
+    テクスチャ描画
+
+[33mcommit 4b2e28e814186baefda129a460e0b78279e8d8d7[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Thu Jan 6 09:52:31 2022 +0900
+
+    シャーだーリソースビューの作成
+
+[33mcommit 029745d3a491f72a397ccd3a4cf1b5aab577f179[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 21 09:51:27 2021 +0900
+
+    テクスチャ用リソースバッファ作成
+
+[33mcommit efe9a74aeb33a5cea79d4d599db8963a7f7d188f[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 21 09:33:30 2021 +0900
+
+    シェーダー間で uv 情報の受け渡しを実装
+
+[33mcommit 942972a8e87124daf648c9fe82552a76b6f2da4c[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 20 23:19:48 2021 +0900
+
+    インデックスで四角形表示
+
+[33mcommit b64564cfcdbc17ff86d53ebb39a01aab09435839[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 20 23:04:35 2021 +0900
+
+    4頂点で四角形表示（ストリップ）
+
+[33mcommit a7d0f1a492bd5cfa6750e44a8124857175bfe743[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 20 23:01:42 2021 +0900
+
+    三角形の表示を少し変更
+
+[33mcommit c605c880912aab0480da428bf5d5b764211f7aaf[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 20 22:57:09 2021 +0900
+
+    三角形の描画に成功
+
+[33mcommit 90b969963c8d8f680b87fe7df9dc0a853d33550d[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 20 22:47:01 2021 +0900
+
+    三角形の表示（表示はできていない）
+
+[33mcommit 0304e6494e6694096f823c099714d28b284084a2[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Dec 19 23:24:00 2021 +0900
+
+    ルートシグネチャの作成
+    
+    直前のコミットに出ていたエラーは取り除かれた。
+
+[33mcommit bcca96018d12f1e3aa697e1be9b582685b7157ca[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Dec 19 23:10:38 2021 +0900
+
+    グラフィクスパイプラインステート作成まで
+    
+    ただ現状だと引数の指定が不十分なので、生成に失敗する。
+
+[33mcommit 517c112b4763a0ebc98d74ec3d0d1dc02500cda8[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Dec 19 15:09:24 2021 +0900
+
+    シェーダコンパイルのエラー解消
+
+[33mcommit b44c12ef3af191aed160cf00e52017aef7396160[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Dec 18 22:30:36 2021 +0900
+
+    シェーダのコンパイルまで（エラー検知）
+
+[33mcommit da43dbab1c683e45200da6966ab24ad59055359d[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sat Dec 18 21:53:13 2021 +0900
+
+    ポリゴンの表示　頂点バッファ作成まで
+
+[33mcommit b83e0e9eb49987dd9559f6e898b4998dfac1c34f[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Fri Dec 17 23:15:40 2021 +0900
+
+    画面の初期化が終わり（参考書第３章まで完了）
+    
+    まだエラー分が出力されているが、画面は正常に出力されている。
+
+[33mcommit 781285b338dee8a2aaa0551490feb57473d0799b[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Fri Dec 17 22:33:14 2021 +0900
+
+    メインループ内の処理を実装
+
+[33mcommit 32b59fd62442f58c8f1d566b1d46c61da9ddf319[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Thu Dec 16 22:53:29 2021 +0900
+
+    メインループ処理
+    
+    アロケータのリセットと、レンダーターゲットのセットまでできた。
+
+[33mcommit 4861c06c008f5b6af6bd2c84e3bd133d31640f98[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Thu Dec 16 22:38:06 2021 +0900
+
+    スワップチェーンとバッファを関連付ける
+
+[33mcommit ed608802050823eee20b1fd9587938e0debb6323[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Wed Dec 15 22:56:28 2021 +0900
+
+    スワップチェーンの作成まで
+
+[33mcommit 1c1bbac8641fbc481c44d2a9f356ae309d4f6e3e[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Wed Dec 15 09:48:45 2021 +0900
+
+    コマンドリスト等の作成
+
+[33mcommit 02d89e5f51a1ff22e1a9c3cd1b3aeb3c275e33b5[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 21:51:25 2021 +0900
+
+    gitignore 更新
+
+[33mcommit 8d3a1fdafad729bb508049e76f0191d05bdab111[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 21:49:43 2021 +0900
+
+    tmp
+
+[33mcommit 8c2eaab1b04d99aa0f30711a0ca6a47b190c6825[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 21:47:18 2021 +0900
+
+    temp
+
+[33mcommit 62d19a2c52b0ce77028fabf34c080de83f5e1f7a[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 21:46:15 2021 +0900
+
+    temp
+
+[33mcommit 5b29e644f8d59496041c1769ce0d78e82bb1a7da[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 21:43:42 2021 +0900
+
+    Debug削除
+
+[33mcommit 5e1a2624972dc42c3c4bc59291fa7374d5e79786[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 21:42:34 2021 +0900
+
+    基本的な初期化
+
+[33mcommit af5fbe7cd28f9ebb498779c7a79227d96671cfbc[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 00:17:15 2021 +0900
+
+    更新
+
+[33mcommit f892bc949f4835924550fd70e45f3ee95b7b6394[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 00:15:41 2021 +0900
+
+    ウィンドウの表示まで
+
+[33mcommit 25a57aed2b42c01d228cc42bda4d6dde97dff053[m
+Merge: 1f44acc 1df6210
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 00:04:53 2021 +0900
+
+    Merge branch 'main' of github.com:kakigori12345/DirectX12_test into main
+
+[33mcommit 1f44acc71caaeca8b48ee766002842d0faaebc4a[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Tue Dec 14 00:03:37 2021 +0900
+
+    更新
+
+[33mcommit 74858a68c468629f69be8f5fe220b3741d095fcd[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 13 23:58:33 2021 +0900
+
+    更新
+
+[33mcommit b238167174e89cbea53be87b27b20945ceff400f[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 13 23:58:17 2021 +0900
+
+    更新
+
+[33mcommit bb2caa867b546c273728b4a67e8abcf44c48a5d5[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 13 23:57:25 2021 +0900
+
+    更新
+
+[33mcommit 367106920f8f25716e35b2dc8403339bc5deff88[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 13 23:56:59 2021 +0900
+
+    更新
+
+[33mcommit 7f56eacb8733743020148b4114c1bc9bcbe12ba6[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Mon Dec 13 23:56:18 2021 +0900
+
+    ウィンドウ生成関数追加
+
+[33mcommit 1df6210870edc654417fbc69fe4fcefcb80bd653[m
+Author: Froslass_Glalie <51141586+kakigori12345@users.noreply.github.com>
+Date:   Sun Dec 12 21:55:47 2021 +0900
+
+    docs: Readme に著作権表記追加
+
+[33mcommit 0c81f28d9bb36e5791ddae9e7c0c026cef0fe537[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Dec 12 21:53:28 2021 +0900
+
+    不要ファイル削除
+
+[33mcommit d0aba95dbfad2e3fec05273bb181d49c3e077816[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Dec 12 21:51:48 2021 +0900
+
+    不要ファイル削除
+
+[33mcommit dd550499232b97de1f15a93efb783a92f71ed71a[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Dec 12 21:49:41 2021 +0900
+
+    main.cpp 追加
+
+[33mcommit b79d604cf229b3b3928c5e15fd8898ddd1860190[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Dec 12 21:43:29 2021 +0900
+
+    プロジェクトファイル再作成
+
+[33mcommit 7b5978db4aefdabe044a1773548a1d74a59baf72[m
+Author: Kaigori123 <e1212@ob.akashi.ac.jp>
+Date:   Sun Dec 12 21:39:02 2021 +0900
+
+    ソリューションファイル作成
+
+[33mcommit 4a41420a2a7e46b274fe9cd3ad9caa3af48acd9f[m
+Author: Froslass_Glalie <51141586+kakigori12345@users.noreply.github.com>
+Date:   Sun Dec 12 21:29:12 2021 +0900
+
+    Initial commit

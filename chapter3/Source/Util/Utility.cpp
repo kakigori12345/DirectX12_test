@@ -102,3 +102,16 @@ void DebugOutputFormatString(const char* format, ...) {
 	va_end(valist);
 #endif
 }
+
+
+//! @brief ‰æ–ÊƒTƒCƒYŽæ“¾
+WindowInfo GetWindowInfo(HWND hwnd) {
+	WindowInfo retval;
+
+	RECT rect;
+	GetWindowRect(hwnd, &rect);
+	retval.height = rect.bottom - rect.top;
+	retval.width = rect.right - rect.left;
+
+	return retval;
+}

@@ -33,3 +33,14 @@ PMDRenderer::~PMDRenderer() {
 
 // シングルトン
 SINGLETON_CPP(PMDRenderer)
+
+
+
+// @brief クラスの初期化
+// @note このクラスを使用する前に一度必ず呼び出すこと
+bool PMDRenderer::Init(ID3D12Device* device) {
+
+
+
+	return true;
+}

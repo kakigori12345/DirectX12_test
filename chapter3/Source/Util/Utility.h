@@ -1,6 +1,18 @@
 #pragma once
 
 #include <string>
+#include <Windows.h>
+
+
+//-----------------------------------------------------------------
+// Type Definition
+//-----------------------------------------------------------------
+struct WindowInfo {
+	UINT height;
+	UINT width;
+};
+
+
 
 //! @brief アライメントにそろえたサイズを返す
 //! @param[in] size 元のサイズ
@@ -43,3 +55,8 @@ std::pair<std::string, std::string> SplitFileName(
 	// @param 可変 長 引数 
 	// @remarks この 関数 は デバッグ 用 です。 デバッグ 時 にしか 動作 し ませ ん
 void DebugOutputFormatString(const char* format, ...);
+
+
+//! @brief 画面サイズ取得
+WindowInfo GetWindowInfo(HWND hwnd);
+

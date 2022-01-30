@@ -9,7 +9,10 @@
 
 // Direct3D
 #include <d3d12.h>
+#include <d3dx12.h>
 #include <dxgi1_6.h>
+#include <DirectXMath.h>
+
 
 //ComPtr
 #include <wrl.h>
@@ -19,6 +22,19 @@
 
 class Dx12Wrapper {
 	SINGLETON_HEADER(Dx12Wrapper)
+
+	//-----------------------------------------------------------------
+	// Type Definition
+	//-----------------------------------------------------------------
+	// シェーダー側に渡すための基本的な行列データ
+	struct SceneData {
+		// TODO: 16バイトアライメントを施す
+		DirectX::XMMATRIX world;
+		DirectX::XMMATRIX view;
+		DirectX::XMMATRIX proj;
+		DirectX::XMFLOAT3 eye;
+	};
+
 	//----------------------------------------------------
 	// メソッド
 	//----------------------------------------------------
@@ -56,18 +72,30 @@ public:
 	// メンバ変数
 	//----------------------------------------------------
 private:
+	bool m_isInitialized;
+
+private:
 	Microsoft::WRL::ComPtr<ID3D12Device>				m_device;
 	Microsoft::WRL::ComPtr<IDXGIFactory6>				m_dxgiFactory;
 	Microsoft::WRL::ComPtr<IDXGISwapChain4>				m_swapchain;
 
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator>		_cmdAllocator;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	_cmdList;
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue>			_cmdQueue;
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator>		m_cmdAllocator;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	m_cmdList;
+	Microsoft::WRL::ComPtr<ID3D12CommandQueue>			m_cmdQueue;
 
-private:
-	UINT m_windowHeight;
-	UINT m_windowWidth;
+public: //一時的にpublicにしておく。TODO:リファクタ後はprivateにしておく
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		rtvHeaps;
+	std::vector<ID3D12Resource*>						_backBuffers;
 
-private:
-	bool m_isInitialized;
+	Microsoft::WRL::ComPtr<ID3DBlob>					_vsBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob>					_psBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob>					errorBlob;
+
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		basicDescHeap;
+	Microsoft::WRL::ComPtr<ID3D12Resource>				constBuff;
+
+	SceneData*											mapMatrix;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource>				depthBuffer;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		dsvHeap;
 };
