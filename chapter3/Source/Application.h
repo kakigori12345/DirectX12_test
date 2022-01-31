@@ -5,9 +5,6 @@
 //-----------------------------------------------------------------
 
 // Direct3D
-#include <d3d12.h>
-#include <dxgi1_6.h>
-#include <d3dx12.h>
 #include <DirectXMath.h>
 
 //ComPtr
@@ -23,7 +20,7 @@ class Application {
 	// メソッド
 	//----------------------------------------------------
 public:
-	//static Application* Instance();
+	HWND GetWindowHandle();
 
 	bool Init();
 
@@ -31,11 +28,13 @@ public:
 
 	void Terminate();
 
+
 	//----------------------------------------------------
 	// メンバ変数
 	//----------------------------------------------------
 private:
 	WNDCLASSEX window;
+	HWND m_hwnd;
 
 	float												angleY;
 	DirectX::XMFLOAT3									eye;

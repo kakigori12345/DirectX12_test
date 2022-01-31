@@ -6,13 +6,6 @@
 
 // Windows
 #include <Windows.h>
-#include <map>
-
-// シェーダーのコンパイル
-#include <d3dcompiler.h>
-
-// DirectXTexライブラリ
-#include <DirectXTex.h>
 
 // その他
 #include "Util/Utility.h"
@@ -62,7 +55,8 @@ namespace {
 
 //! @brief コンストラクタ
 Application::Application()
-	: window{} {
+	: window{}
+	, m_hwnd(nullptr){
 
 }
 
@@ -74,6 +68,9 @@ Application::~Application() {
 // シングルトン
 SINGLETON_CPP(Application)
 
+HWND Application::GetWindowHandle() {
+	return m_hwnd;
+}
 
 bool Application::Init() {
 	HRESULT result = S_OK;
@@ -90,7 +87,7 @@ bool Application::Init() {
 	AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
 
 	// ウィンドウ オブジェクト の 生成
-	HWND hwnd = CreateWindow(
+	m_hwnd = CreateWindow(
 		window.lpszClassName,// クラス 名 指定
 		L"DX12テスト", // タイトル バー の 文字
 		WS_OVERLAPPEDWINDOW, // タイトル バー と 境界線 が ある ウィンドウ
@@ -104,18 +101,10 @@ bool Application::Init() {
 		nullptr); // 追加 パラメーター
 
 	// 作成したウィンドウの情報を取得
-	WindowInfo wInfo = GetWindowInfo(hwnd);
+	WindowInfo wInfo = GetWindowInfo(m_hwnd);
 
 	// ウィンドウ 表示
-	ShowWindow(hwnd, SW_SHOW);
-
-
-	// 各クラスを初期化
-	Dx12Wrapper* dxWrapper = Dx12Wrapper::Instance();
-	if (!dxWrapper->Init(hwnd)) {
-		DebugOutputFormatString("Dx12Wrapper の初期化に失敗.");
-		return 0;
-	}
+	ShowWindow(m_hwnd, SW_SHOW);
 
 	// ワールド行列
 	angleY = 0;// XM_PIDIV4;
@@ -143,12 +132,6 @@ void Application::Run() {
 	ID3D12Device* _dev = dxWrapper->GetDevice();
 	IDXGISwapChain4* _swapchain = dxWrapper->GetSwapchain();
 	ID3D12GraphicsCommandList* _cmdList = dxWrapper->GetCommandList();
-
-	// renderer初期化
-	if (!renderer->Init(_dev)) {
-		DebugOutputFormatString("Failed Initializing Renderer.");
-		return;
-	}
 
 	// 仮でモデルを作成
 	PMDActor actor("data/Model/初音ミクmetal.pmd");
