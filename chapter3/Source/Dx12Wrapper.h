@@ -58,29 +58,21 @@ public:
 	//! @brief 描画終了時処理
 	void EndDraw();
 
-	//------------------------------------------------------------------
-	// Dx12関連のオブジェクト取得系
-	// TODO: リファクタできたら必要ない関数ばかりになるので整理する
-	//------------------------------------------------------------------
 	// @brief デバイスを取得
 	ID3D12Device* GetDevice();
-	// @brief ファクトリを取得
-	IDXGIFactory6* GetFactory();
-	// @brief スワップチェーンを取得
-	IDXGISwapChain4* GetSwapchain();
 	// @brief コマンドリストを取得
 	ID3D12GraphicsCommandList* GetCommandList();
 
-
+private:
 	//! @brief コマンドリスト実行
 	//! @note 処理が完了するまで内部で待機する
-	bool ExecuteCommandList();
+	bool _ExecuteCommandList();
 
 	//! @brief コマンドリストをリセット
-	bool ResetCommandList();
+	bool _ResetCommandList();
 
 	//! @brief スワップチェーンのフリップ処理
-	bool SwapchainPresent();
+	bool _SwapchainPresent();
 
 	//----------------------------------------------------
 	// メンバ変数
@@ -97,27 +89,26 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	m_cmdList;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue>			m_cmdQueue;
 
-public: //一時的にpublicにしておく。TODO:リファクタ後はprivateにしておく
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		rtvHeaps;
-	std::vector<ID3D12Resource*>						_backBuffers;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		m_rtvHeaps;
+	std::vector<ID3D12Resource*>						m_backBuffers;
 
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		basicDescHeap;
-	Microsoft::WRL::ComPtr<ID3D12Resource>				constBuff;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		m_basicDescHeap;
+	Microsoft::WRL::ComPtr<ID3D12Resource>				m_constBuff;
 
-	SceneData*											mapMatrix;
+	SceneData*											m_mapMatrix;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource>				depthBuffer;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		dsvHeap;
+	Microsoft::WRL::ComPtr<ID3D12Resource>				m_depthBuffer;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		m_dsvHeap;
 
-	CD3DX12_VIEWPORT									viewport;
-	D3D12_RECT											scissorrect;
+	CD3DX12_VIEWPORT									m_viewport;
+	D3D12_RECT											m_scissorrect;
 
 private:
-	float												angleY;
-	DirectX::XMFLOAT3									eye;
-	DirectX::XMFLOAT3									target;
-	DirectX::XMFLOAT3									up;
-	DirectX::XMMATRIX									worldMat;
-	DirectX::XMMATRIX									viewMat;
-	DirectX::XMMATRIX									projMat;
+	float												m_angleY;
+	DirectX::XMFLOAT3									m_eye;
+	DirectX::XMFLOAT3									m_target;
+	DirectX::XMFLOAT3									m_up;
+	DirectX::XMMATRIX									m_worldMat;
+	DirectX::XMMATRIX									m_viewMat;
+	DirectX::XMMATRIX									m_projMat;
 };

@@ -13,7 +13,7 @@
 // リファクタ
 #include "Dx12Wrapper.h"
 #include "PMD/PMDRenderer.h"
-#include "PMD/PMDActor.h" //TODO:Rendererができたらいらない
+#include "PMD/PMDActor.h"
 
 
 //-----------------------------------------------------------------
@@ -55,7 +55,7 @@ namespace {
 
 //! @brief コンストラクタ
 Application::Application()
-	: window{}
+	: m_window{}
 	, m_hwnd(nullptr){
 
 }
@@ -76,11 +76,11 @@ bool Application::Init() {
 	HRESULT result = S_OK;
 
 	// ウィンドウ クラス の 生成＆ 登録
-	window.cbSize = sizeof(WNDCLASSEX);
-	window.lpfnWndProc = (WNDPROC)WindowProcedure; // コール バック 関数 の 指定
-	window.lpszClassName = L"DX12Sample"; // アプリケーション クラス 名
-	window.hInstance = GetModuleHandle(nullptr); // ハンドル の 取得
-	RegisterClassEx(&window); // アプリケーション クラス（ ウィンドウ クラス の 指定 を OS に 伝える）
+	m_window.cbSize = sizeof(WNDCLASSEX);
+	m_window.lpfnWndProc = (WNDPROC)WindowProcedure; // コール バック 関数 の 指定
+	m_window.lpszClassName = L"DX12Sample"; // アプリケーション クラス 名
+	m_window.hInstance = GetModuleHandle(nullptr); // ハンドル の 取得
+	RegisterClassEx(&m_window); // アプリケーション クラス（ ウィンドウ クラス の 指定 を OS に 伝える）
 	RECT wrc = { 0, 0, window_width, window_height };// ウィンドウサイズ を 決める
 
 	// 関数 を 使っ て ウィンドウ の サイズ を 補正 する
@@ -88,7 +88,7 @@ bool Application::Init() {
 
 	// ウィンドウ オブジェクト の 生成
 	m_hwnd = CreateWindow(
-		window.lpszClassName,// クラス 名 指定
+		m_window.lpszClassName,// クラス 名 指定
 		L"DX12テスト", // タイトル バー の 文字
 		WS_OVERLAPPEDWINDOW, // タイトル バー と 境界線 が ある ウィンドウ
 		CW_USEDEFAULT, // 表示 x 座標 は OS に お 任せ
@@ -97,7 +97,7 @@ bool Application::Init() {
 		wrc.bottom - wrc.top, // ウィンドウ 高
 		nullptr, // 親 ウィンドウ ハンドル
 		nullptr, // メニュー ハンドル
-		window.hInstance, // 呼び出し アプリケーション ハンドル
+		m_window.hInstance, // 呼び出し アプリケーション ハンドル
 		nullptr); // 追加 パラメーター
 
 	// 作成したウィンドウの情報を取得
@@ -115,7 +115,6 @@ void Application::Run() {
 	PMDRenderer* renderer = PMDRenderer::Instance();
 
 	ID3D12Device* _dev = dxWrapper->GetDevice();
-	IDXGISwapChain4* _swapchain = dxWrapper->GetSwapchain();
 	ID3D12GraphicsCommandList* _cmdList = dxWrapper->GetCommandList();
 
 	// 仮でモデルを作成
@@ -158,7 +157,7 @@ void Application::Run() {
 
 void Application::Terminate() {
 	//もう クラス は 使わ ない ので 登録 解除 する
-	UnregisterClass(window.lpszClassName, window.hInstance);
+	UnregisterClass(m_window.lpszClassName, m_window.hInstance);
 
 	DebugOutputFormatString(" Show window test.");
 }

@@ -12,7 +12,7 @@ cbuffer SceneBuffer : register(b0) {			//定数バッファー0
 	matrix world;
 	matrix view;
 	matrix proj;
-	float3 eye;
+	float3 m_eye;
 }
 
 // 定数バッファ1

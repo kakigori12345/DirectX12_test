@@ -43,15 +43,22 @@ Dx12Wrapper::Dx12Wrapper()
 	, m_cmdAllocator(nullptr)
 	, m_cmdList(nullptr)
 	, m_cmdQueue(nullptr)
-	, rtvHeaps(nullptr)
-	, _backBuffers()
-	, basicDescHeap(nullptr)
-	, constBuff(nullptr)
-	, mapMatrix(nullptr)
-	, depthBuffer(nullptr)
-	, dsvHeap(nullptr)
-	, viewport()
-	, scissorrect(){
+	, m_rtvHeaps(nullptr)
+	, m_backBuffers()
+	, m_basicDescHeap(nullptr)
+	, m_constBuff(nullptr)
+	, m_mapMatrix(nullptr)
+	, m_depthBuffer(nullptr)
+	, m_dsvHeap(nullptr)
+	, m_viewport()
+	, m_scissorrect()
+	, m_angleY(0)
+	, m_eye()
+	, m_target()
+	, m_up()
+	, m_worldMat()
+	, m_viewMat()
+	, m_projMat(){
 }
 
 // @brief デストラクタ
@@ -181,7 +188,7 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 		heapDesc.NumDescriptors = 2; //表裏の２つ
 		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
-		result = m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(rtvHeaps.ReleaseAndGetAddressOf())); //この段階ではまだ RTV ではない
+		result = m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(m_rtvHeaps.ReleaseAndGetAddressOf())); //この段階ではまだ RTV ではない
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Creating DescriptorHeap.");
 			return false;
@@ -192,18 +199,18 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 		rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;	//ガンマ補正あり
 		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		// スワップチェーンとビューの関連付け
-		_backBuffers.resize(COMMAND_BUFFER_COUNT);
-		D3D12_CPU_DESCRIPTOR_HANDLE handle = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
+		m_backBuffers.resize(COMMAND_BUFFER_COUNT);
+		D3D12_CPU_DESCRIPTOR_HANDLE handle = m_rtvHeaps->GetCPUDescriptorHandleForHeapStart();
 		for (UINT idx = 0; idx < COMMAND_BUFFER_COUNT; ++idx) {
-			result = m_swapchain->GetBuffer(idx, IID_PPV_ARGS(&_backBuffers[idx]));
+			result = m_swapchain->GetBuffer(idx, IID_PPV_ARGS(&m_backBuffers[idx]));
 			if (result != S_OK) {
 				DebugOutputFormatString("Missed at Getting BackBuffer.");
 				return false;
 			}
 			// 先ほど作成したディスクリプタヒープを RTV として設定する
-			rtvDesc.Format = _backBuffers[idx]->GetDesc().Format;
+			rtvDesc.Format = m_backBuffers[idx]->GetDesc().Format;
 			m_device->CreateRenderTargetView(
-				_backBuffers[idx],
+				m_backBuffers[idx],
 				&rtvDesc,
 				handle);
 			// ハンドルを一つずらす
@@ -219,7 +226,7 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 		descHeapDesc.NumDescriptors = 1;// CBV
 		descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;	//シェーダーリソースビュー用
 
-		result = m_device->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(basicDescHeap.ReleaseAndGetAddressOf()));
+		result = m_device->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(m_basicDescHeap.ReleaseAndGetAddressOf()));
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Creating Descriptor Heap For ShaderReosurceView.");
 			return false;
@@ -236,21 +243,21 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 			&constBufferDesc,	// 0xffアライメント
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(constBuff.ReleaseAndGetAddressOf())
+			IID_PPV_ARGS(m_constBuff.ReleaseAndGetAddressOf())
 		);
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Creating Const Buffer.");
 			return false;
 		}
 		// マップで定数コピー
-		result = constBuff->Map(0, nullptr, (void**)&mapMatrix);
+		result = m_constBuff->Map(0, nullptr, (void**)&m_mapMatrix);
 
 		// 定数バッファービューを作成する
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = constBuff->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = constBuff->GetDesc().Width;
+		cbvDesc.BufferLocation = m_constBuff->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = m_constBuff->GetDesc().Width;
 		// ディスクリプタヒープ上でのメモリ位置（ハンドル）を取得
-		auto basicHeapHandle = basicDescHeap->GetCPUDescriptorHandleForHeapStart(); //この状態だとシェーダリソースビューの位置を示す
+		auto basicHeapHandle = m_basicDescHeap->GetCPUDescriptorHandleForHeapStart(); //この状態だとシェーダリソースビューの位置を示す
 		// 実際に定数バッファービューを作成
 		m_device->CreateConstantBufferView(&cbvDesc, basicHeapHandle);
 	}
@@ -281,7 +288,7 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 			&depthResDesc,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,	//深度地書き込み用に使う
 			&depthClearValue,
-			IID_PPV_ARGS(depthBuffer.ReleaseAndGetAddressOf())
+			IID_PPV_ARGS(m_depthBuffer.ReleaseAndGetAddressOf())
 		);
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Creating depth stensil buffer.");
@@ -293,7 +300,7 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 		dsvHeapDesc.NumDescriptors = 1;
 		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 
-		result = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(dsvHeap.ReleaseAndGetAddressOf()));
+		result = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(m_dsvHeap.ReleaseAndGetAddressOf()));
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Creating Depth Heap.");
 			return false;
@@ -306,32 +313,32 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 
 		m_device->CreateDepthStencilView(
-			depthBuffer.Get(),
+			m_depthBuffer.Get(),
 			&dsvDesc,
-			dsvHeap->GetCPUDescriptorHandleForHeapStart()
+			m_dsvHeap->GetCPUDescriptorHandleForHeapStart()
 		);
 	}
 
 	{// ビューポートとシザー矩形
-		viewport = CD3DX12_VIEWPORT{ _backBuffers[0] };
-		scissorrect.top = 0;
-		scissorrect.left = 0;
-		scissorrect.right = scissorrect.left + wInfo.width;
-		scissorrect.bottom = scissorrect.top + wInfo.height;
+		m_viewport = CD3DX12_VIEWPORT{ m_backBuffers[0] };
+		m_scissorrect.top = 0;
+		m_scissorrect.left = 0;
+		m_scissorrect.right = m_scissorrect.left + wInfo.width;
+		m_scissorrect.bottom = m_scissorrect.top + wInfo.height;
 	}
 
 
 	{// シーンデータを設定
 		// ワールド行列
-		angleY = 0; // XM_PIDIV4
-		worldMat = XMMatrixRotationY(angleY);
+		m_angleY = 0; // XM_PIDIV4
+		m_worldMat = XMMatrixRotationY(m_angleY);
 		// ビュー行列
-		eye = XMFLOAT3(0, 10, -15);
-		target = XMFLOAT3(0, 10, 0);
-		up = XMFLOAT3(0, 1, 0);
-		viewMat = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+		m_eye = XMFLOAT3(0, 10, -15);
+		m_target = XMFLOAT3(0, 10, 0);
+		m_up = XMFLOAT3(0, 1, 0);
+		m_viewMat = XMMatrixLookAtLH(XMLoadFloat3(&m_eye), XMLoadFloat3(&m_target), XMLoadFloat3(&m_up));
 		// プロジェクション行列
-		projMat = XMMatrixPerspectiveFovLH(
+		m_projMat = XMMatrixPerspectiveFovLH(
 			XM_PIDIV2,	//画角は90度
 			static_cast<float>(wInfo.width) / static_cast<float>(wInfo.height),	// アスペクト比
 			1.0f,	// ニアクリップ
@@ -348,14 +355,14 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 //! @brief シーンデータをセット
 void Dx12Wrapper::SetSceneData() {
 	// とりあえず回転させておく
-	angleY += 0.01f;
-	worldMat = XMMatrixRotationY(angleY);
+	m_angleY += 0.01f;
+	m_worldMat = XMMatrixRotationY(m_angleY);
 
 	// セット
-	mapMatrix->world = worldMat;
-	mapMatrix->view = viewMat;
-	mapMatrix->proj = projMat;
-	mapMatrix->eye = eye;
+	m_mapMatrix->world = m_worldMat;
+	m_mapMatrix->view = m_viewMat;
+	m_mapMatrix->proj = m_projMat;
+	m_mapMatrix->eye = m_eye;
 }
 
 //! @brief 描画前処理
@@ -366,15 +373,15 @@ void Dx12Wrapper::BeginDraw() {
 
 	// リソースバリアでバッファの使い道を GPU に通知する
 	D3D12_RESOURCE_BARRIER BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
-		_backBuffers[bbIdx], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
+		m_backBuffers[bbIdx], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
 	m_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
 
 	// レンダーターゲットとして指定する
-	auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
+	auto rtvH = m_rtvHeaps->GetCPUDescriptorHandleForHeapStart();
 	rtvH.ptr += bbIdx * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	// 深度バッファビューを関連付け
-	auto dsvHandle = dsvHeap->GetCPUDescriptorHandleForHeapStart();
+	auto dsvHandle = m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
 	m_cmdList->OMSetRenderTargets(1, &rtvH, true, &dsvHandle);
 	// 深度バッファのクリア
 	m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
@@ -383,8 +390,8 @@ void Dx12Wrapper::BeginDraw() {
 	float clearColor[] = { 1.0f, 1.0f, 1.0f, 1.0f }; //白色
 	m_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
 
-	m_cmdList->RSSetViewports(1, &viewport);
-	m_cmdList->RSSetScissorRects(1, &scissorrect);
+	m_cmdList->RSSetViewports(1, &m_viewport);
+	m_cmdList->RSSetScissorRects(1, &m_scissorrect);
 }
 
 //! @brief 描画
@@ -394,9 +401,9 @@ void Dx12Wrapper::Draw(const DrawActorInfo& drawInfo) {
 	m_cmdList->IASetIndexBuffer(drawInfo.ibView);
 
 	{// 描画時の設定
-		ID3D12DescriptorHeap* bdh[] = { basicDescHeap.Get() };
+		ID3D12DescriptorHeap* bdh[] = { m_basicDescHeap.Get() };
 		m_cmdList->SetDescriptorHeaps(1, bdh);
-		m_cmdList->SetGraphicsRootDescriptorTable(0, basicDescHeap->GetGPUDescriptorHandleForHeapStart());
+		m_cmdList->SetGraphicsRootDescriptorTable(0, m_basicDescHeap->GetGPUDescriptorHandleForHeapStart());
 
 		// マテリアル
 		ID3D12DescriptorHeap* mdh[] = { drawInfo.materialDescHeap };
@@ -424,18 +431,18 @@ void Dx12Wrapper::EndDraw() {
 
 	// リソースバリアでバッファの使い道を GPU に通知する
 	D3D12_RESOURCE_BARRIER BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
-		_backBuffers[bbIdx], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT
+		m_backBuffers[bbIdx], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT
 	);
 	m_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
 
 	m_cmdList->Close();
-	ExecuteCommandList();
-	ResetCommandList();
+	_ExecuteCommandList();
+	_ResetCommandList();
 
 	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
-	SwapchainPresent();
+	_SwapchainPresent();
 }
 
 
@@ -443,16 +450,6 @@ void Dx12Wrapper::EndDraw() {
 	// @return デバイス
 ID3D12Device* Dx12Wrapper::GetDevice() {
 	return m_device.Get();
-}
-
-// @brief ファクトリを取得
-IDXGIFactory6* Dx12Wrapper::GetFactory(){
-	return m_dxgiFactory.Get();
-}
-
-// @brief スワップチェーンを取得
-IDXGISwapChain4* Dx12Wrapper::GetSwapchain() {
-	return m_swapchain.Get();
 }
 
 // @brief コマンドリストを取得
@@ -463,7 +460,7 @@ ID3D12GraphicsCommandList* Dx12Wrapper::GetCommandList() {
 
 //! @brief コマンドリスト実行
 //! @note 処理が完了するまで内部で待機する
-bool Dx12Wrapper::ExecuteCommandList() {
+bool Dx12Wrapper::_ExecuteCommandList() {
 	// コマンドリスト実行
 	ID3D12CommandList* cmdLists[] = { m_cmdList.Get() };
 	m_cmdQueue->ExecuteCommandLists(1, cmdLists);
@@ -497,7 +494,7 @@ bool Dx12Wrapper::ExecuteCommandList() {
 
 
 //! @brief コマンドリストをリセット
-bool Dx12Wrapper::ResetCommandList() {
+bool Dx12Wrapper::_ResetCommandList() {
 	HRESULT result = m_cmdAllocator->Reset();
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Reset Allocator.");
@@ -514,7 +511,7 @@ bool Dx12Wrapper::ResetCommandList() {
 
 
 //! @brief スワップチェーンのフリップ処理
-bool Dx12Wrapper::SwapchainPresent() {
+bool Dx12Wrapper::_SwapchainPresent() {
 	HRESULT result = m_swapchain->Present(1, 0);
 	if (result != S_OK) {
 		DebugOutputFormatString("Missed at Present Swapchain.");

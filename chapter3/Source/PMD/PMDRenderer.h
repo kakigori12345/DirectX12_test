@@ -31,12 +31,11 @@ private:
 	bool m_isInitialized;
 
 private:
-public: //TODO: リファクタ後にprivateにする
-	Microsoft::WRL::ComPtr<ID3D12RootSignature>			rootSignature;
-	Microsoft::WRL::ComPtr<ID3DBlob>					rootSigBlob;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState>			_pipelinestate;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature>			m_rootSignature;
+	Microsoft::WRL::ComPtr<ID3DBlob>					m_rootSigBlob;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelinestate;
 
-	Microsoft::WRL::ComPtr<ID3DBlob>					_vsBlob;
-	Microsoft::WRL::ComPtr<ID3DBlob>					_psBlob;
-	Microsoft::WRL::ComPtr<ID3DBlob>					errorBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob>					m_vsBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob>					m_psBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob>					m_errorBlob;
 };

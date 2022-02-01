@@ -39,7 +39,7 @@ struct Material {
 
 //! @brief 描画時の情報を集めた構造体
 struct DrawActorInfo {
-	D3D_PRIMITIVE_TOPOLOGY topology;
+	D3D_PRIMITIVE_TOPOLOGY topology; //CA:こいつにトポロジーを含ませていいものか悩む
 	const D3D12_VERTEX_BUFFER_VIEW* vbView;
 	const D3D12_INDEX_BUFFER_VIEW* ibView;
 	D3D12_DESCRIPTOR_HEAP_TYPE descHeapType;
@@ -77,7 +77,6 @@ private:
 	std::string m_modelPath;
 
 private:
-public: //TODO:一旦publicにしているだけ。リファクタ後に戻す
 	Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertBuff;
 	Microsoft::WRL::ComPtr<ID3D12Resource>				m_idxBuff;
 	D3D12_VERTEX_BUFFER_VIEW							m_vbView;

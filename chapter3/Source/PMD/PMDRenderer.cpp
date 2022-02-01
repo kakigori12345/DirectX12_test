@@ -25,12 +25,12 @@ using namespace std;
 //! @brief コンストラクタ
 PMDRenderer::PMDRenderer() 
 	: m_isInitialized(false)
-	, rootSignature(nullptr)
-	, rootSigBlob(nullptr)
-	, _pipelinestate(nullptr)
-	, _vsBlob(nullptr)
-	, _psBlob(nullptr)
-	, errorBlob(nullptr) {
+	, m_rootSignature(nullptr)
+	, m_rootSigBlob(nullptr)
+	, m_pipelinestate(nullptr)
+	, m_vsBlob(nullptr)
+	, m_psBlob(nullptr)
+	, m_errorBlob(nullptr) {
 }
 
 //! @brief デストラクタ
@@ -58,15 +58,15 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 			"vs_5_0",
 			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
 			0,
-			&_vsBlob,
-			&errorBlob);
+			&m_vsBlob,
+			&m_errorBlob);
 		if (result != S_OK) {
 			// 詳細なエラー表示
 			std::string errstr;
-			errstr.resize(errorBlob->GetBufferSize());
+			errstr.resize(m_errorBlob->GetBufferSize());
 			std::copy_n(
-				(char*)errorBlob->GetBufferPointer(),
-				errorBlob->GetBufferSize(),
+				(char*)m_errorBlob->GetBufferPointer(),
+				m_errorBlob->GetBufferSize(),
 				errstr.begin());
 			OutputDebugStringA(errstr.c_str());
 
@@ -82,15 +82,15 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 			"ps_5_0",
 			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
 			0,
-			&_psBlob,
-			&errorBlob);
+			&m_psBlob,
+			&m_errorBlob);
 		if (result != S_OK) {
 			// 詳細なエラー表示
 			std::string errstr;
-			errstr.resize(errorBlob->GetBufferSize());
+			errstr.resize(m_errorBlob->GetBufferSize());
 			std::copy_n(
-				(char*)errorBlob->GetBufferPointer(),
-				errorBlob->GetBufferSize(),
+				(char*)m_errorBlob->GetBufferPointer(),
+				m_errorBlob->GetBufferSize(),
 				errstr.begin());
 			OutputDebugStringA(errstr.c_str());
 
@@ -103,8 +103,8 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeline = {};
 		// 頂点シェーダー、ピクセルシェーダーを設定
 		gpipeline.pRootSignature = nullptr; //後々設定
-		gpipeline.VS = CD3DX12_SHADER_BYTECODE(_vsBlob.Get());
-		gpipeline.PS = CD3DX12_SHADER_BYTECODE(_psBlob.Get());
+		gpipeline.VS = CD3DX12_SHADER_BYTECODE(m_vsBlob.Get());
+		gpipeline.PS = CD3DX12_SHADER_BYTECODE(m_psBlob.Get());
 		// サンプルマスクとラスタライザーの設定
 		gpipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK; //デフォルトのサンプルマスク（0xffffffff）
 		gpipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -166,8 +166,8 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 		result = D3D12SerializeRootSignature(
 			&rootSignatureDesc,
 			D3D_ROOT_SIGNATURE_VERSION_1_0,
-			&rootSigBlob,
-			&errorBlob);
+			&m_rootSigBlob,
+			&m_errorBlob);
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Serializing Root Signature.");
 			return 0;
@@ -175,19 +175,19 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 
 		result = device->CreateRootSignature(
 			0,	//nodemask
-			rootSigBlob->GetBufferPointer(),
-			rootSigBlob->GetBufferSize(),
-			IID_PPV_ARGS(rootSignature.ReleaseAndGetAddressOf()));
+			m_rootSigBlob->GetBufferPointer(),
+			m_rootSigBlob->GetBufferSize(),
+			IID_PPV_ARGS(m_rootSignature.ReleaseAndGetAddressOf()));
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Creating Root Signature");
 			return 0;
 		}
 		// 作成したルートシグネチャをパイプラインに設定
-		gpipeline.pRootSignature = rootSignature.Get();
+		gpipeline.pRootSignature = m_rootSignature.Get();
 
 
 		// グラフィクスパイプラインステートオブジェクトの生成
-		result = device->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(_pipelinestate.ReleaseAndGetAddressOf()));
+		result = device->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(m_pipelinestate.ReleaseAndGetAddressOf()));
 		if (result != S_OK) {
 			DebugOutputFormatString("Missed at Creating Graphics Pipeline State.");
 			return 0;
@@ -202,6 +202,6 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 
 //! @brief 描画前処理
 void PMDRenderer::BeginDraw(ID3D12GraphicsCommandList* cmdList) {
-	cmdList->SetPipelineState(_pipelinestate.Get());
-	cmdList->SetGraphicsRootSignature(rootSignature.Get());
+	cmdList->SetPipelineState(m_pipelinestate.Get());
+	cmdList->SetGraphicsRootSignature(m_rootSignature.Get());
 }

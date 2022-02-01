@@ -44,8 +44,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 namespace {
+	// シングルトンの初期化
 	bool InitializeSingleton() {
-		// シングルトンの初期化 TODO:シングルトンの初期化する処理は別関数にまとめたい
 		Application::Create();
 		Dx12Wrapper::Create();
 		PMDRenderer::Create();
@@ -68,8 +68,8 @@ namespace {
 		return true;
 	}
 
+	// シングルトン終了
 	void FinalizeSingleton() {
-		// シングルトン終了
 		PMDRenderer::Destroy();
 		Dx12Wrapper::Destroy();
 		Application::Destroy();
