@@ -198,3 +198,10 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 	m_isInitialized = true;
 	return true;
 }
+
+
+//! @brief •`‰æ‘Oˆ—
+void PMDRenderer::BeginDraw(ID3D12GraphicsCommandList* cmdList) {
+	cmdList->SetPipelineState(_pipelinestate.Get());
+	cmdList->SetGraphicsRootSignature(rootSignature.Get());
+}

@@ -20,6 +20,10 @@
 #include "Util/SingletonDef.h"
 
 
+// 型依存
+struct DrawActorInfo;
+
+
 class Dx12Wrapper {
 	SINGLETON_HEADER(Dx12Wrapper)
 
@@ -43,6 +47,16 @@ public:
 	// @note このクラスを使用する前に一度必ず呼び出すこと
 	bool Init(HWND hwnd);
 
+	// 描画命令
+	//! @brief シーンデータをセット
+	void SetSceneData();
+	//! @brief 描画前処理
+	void BeginDraw();
+	//! @brief 描画
+	//! @param[in] actor 描画対象
+	void Draw(const DrawActorInfo& drawInfo);
+	//! @brief 描画終了時処理
+	void EndDraw();
 
 	//------------------------------------------------------------------
 	// Dx12関連のオブジェクト取得系
@@ -97,4 +111,13 @@ public: //一時的にpublicにしておく。TODO:リファクタ後はprivateにしておく
 
 	CD3DX12_VIEWPORT									viewport;
 	D3D12_RECT											scissorrect;
+
+private:
+	float												angleY;
+	DirectX::XMFLOAT3									eye;
+	DirectX::XMFLOAT3									target;
+	DirectX::XMFLOAT3									up;
+	DirectX::XMMATRIX									worldMat;
+	DirectX::XMMATRIX									viewMat;
+	DirectX::XMMATRIX									projMat;
 };

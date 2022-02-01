@@ -37,6 +37,17 @@ struct Material {
 	AdditionalMaterial additional;
 };
 
+//! @brief •`‰æ‚Ìî•ñ‚ğW‚ß‚½\‘¢‘Ì
+struct DrawActorInfo {
+	D3D_PRIMITIVE_TOPOLOGY topology;
+	const D3D12_VERTEX_BUFFER_VIEW* vbView;
+	const D3D12_INDEX_BUFFER_VIEW* ibView;
+	D3D12_DESCRIPTOR_HEAP_TYPE descHeapType;
+	unsigned int incCount;
+	ID3D12DescriptorHeap* materialDescHeap;
+	const std::vector<Material>* materials;
+};
+
 
 class PMDActor {
 	//----------------------------------------------------
@@ -54,6 +65,9 @@ public:
 public:
 	//! @brief ‰Šú‰»
 	bool Init(ID3D12Device* device);
+
+	//! @brief •`‰æî•ñæ“¾
+	void GetDrawInfo(DrawActorInfo& output) const;
 
 
 	//----------------------------------------------------

@@ -36,11 +36,11 @@ private:
 	WNDCLASSEX window;
 	HWND m_hwnd;
 
-	float												angleY;
-	DirectX::XMFLOAT3									eye;
-	DirectX::XMFLOAT3									target;
-	DirectX::XMFLOAT3									up;
-	DirectX::XMMATRIX									worldMat;
-	DirectX::XMMATRIX									viewMat;
-	DirectX::XMMATRIX									projMat;
+	//float												angleY;
+	//DirectX::XMFLOAT3									eye;
+	//DirectX::XMFLOAT3									target;
+	//DirectX::XMFLOAT3									up;
+	//DirectX::XMMATRIX									worldMat;
+	//DirectX::XMMATRIX									viewMat;
+	//DirectX::XMMATRIX									projMat;
 };

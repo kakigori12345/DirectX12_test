@@ -106,21 +106,6 @@ bool Application::Init() {
 	// ウィンドウ 表示
 	ShowWindow(m_hwnd, SW_SHOW);
 
-	// ワールド行列
-	angleY = 0;// XM_PIDIV4;
-	// ビュー行列
-	eye = XMFLOAT3(0, 10, -15);
-	target = XMFLOAT3(0, 10, 0);
-	up = XMFLOAT3(0, 1, 0);
-	viewMat = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
-	// プロジェクション行列
-	projMat = XMMatrixPerspectiveFovLH(
-		XM_PIDIV2,	//画角は90度
-		static_cast<float>(wInfo.width) / static_cast<float>(wInfo.height),	// アスペクト比
-		1.0f,	// ニアクリップ
-		100.0f	// ファークリップ
-	);
-
 	return true;
 }
 
@@ -143,92 +128,19 @@ void Application::Run() {
 	MSG msg = {};
 
 	while (true) {
-		{ // 行列計算
-			angleY += 0.01f;
-			worldMat = XMMatrixRotationY(angleY);
-			dxWrapper->mapMatrix->world = worldMat;
-			dxWrapper->mapMatrix->view = viewMat;
-			dxWrapper->mapMatrix->proj = projMat;
-			dxWrapper->mapMatrix->eye = eye;
-		}
+		dxWrapper->SetSceneData();
 
-		// 2.レンダーターゲットをバックバッファにセット
-		// 現在のバックバッファを取得
-		SIZE_T bbIdx = _swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
+		// 描画前処理
+		dxWrapper->BeginDraw();
+		renderer->BeginDraw(_cmdList);
 
-		// リソースバリアでバッファの使い道を GPU に通知する
-		D3D12_RESOURCE_BARRIER BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
-			dxWrapper->_backBuffers[bbIdx], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
-		);
-		_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
+		// 描画
+		DrawActorInfo drawInfo;
+		actor.GetDrawInfo(drawInfo);
+		dxWrapper->Draw(drawInfo);
 
-		// レンダーターゲットとして指定する
-		auto rtvH = dxWrapper->rtvHeaps->GetCPUDescriptorHandleForHeapStart();
-		rtvH.ptr += bbIdx * _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		// 深度バッファビューを関連付け
-		auto dsvHandle = dxWrapper->dsvHeap->GetCPUDescriptorHandleForHeapStart();
-		_cmdList->OMSetRenderTargets(1, &rtvH, true, &dsvHandle);
-		// 深度バッファのクリア
-		_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-		// 3.レンダーターゲットを指定色でクリア
-		float clearColor[] = { 1.0f, 1.0f, 1.0f, 1.0f }; //白色
-		_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
-
-		// 描画命令
-		_cmdList->SetPipelineState(renderer->_pipelinestate.Get());
-		_cmdList->SetGraphicsRootSignature(renderer->rootSignature.Get());
-		_cmdList->RSSetViewports(1, &(dxWrapper->viewport));
-		_cmdList->RSSetScissorRects(1, &(dxWrapper->scissorrect));
-		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		_cmdList->IASetVertexBuffers(0, 1, &(actor.m_vbView));
-		_cmdList->IASetIndexBuffer(&(actor.m_ibView));
-		//_cmdList->DrawIndexedInstanced(indicesNum, 1, 0, 0, 0);
-
-		{// 描画時の設定
-			// 行列変換
-			ID3D12DescriptorHeap* bdh[] = { dxWrapper->basicDescHeap.Get() };
-			_cmdList->SetDescriptorHeaps(1, bdh);
-			_cmdList->SetGraphicsRootDescriptorTable(0, dxWrapper->basicDescHeap->GetGPUDescriptorHandleForHeapStart());
-
-			// マテリアル
-			ID3D12DescriptorHeap* mdh[] = { actor.m_materialDescHeap.Get() };
-			_cmdList->SetDescriptorHeaps(1, mdh);
-
-			auto materialHandle = actor.m_materialDescHeap->GetGPUDescriptorHandleForHeapStart();
-			unsigned int idxOffset = 0;
-			auto cbvsrvIncSize = _dev->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			cbvsrvIncSize *= 5;	//CBV, SRV, SRV, SRV, SRV の５つ分
-
-			for (auto& m : actor.m_materials) {
-				_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
-				_cmdList->DrawIndexedInstanced(m.indicesNum, 1, idxOffset, 0, 0);
-
-				// ヒープポインタとインデックスを次に進める
-				materialHandle.ptr += cbvsrvIncSize;
-				idxOffset += m.indicesNum;
-			}
-		}
-
-		// リソースバリアでバッファの使い道を GPU に通知する
-		BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
-			dxWrapper->_backBuffers[bbIdx], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT
-		);
-		_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
-
-		// 4.レンダーターゲットをクローズ
-		_cmdList->Close();
-
-
-		dxWrapper->ExecuteCommandList();
-		dxWrapper->ResetCommandList();
-
-		// 6.スワップチェーンのフリップ処理
-		// 状態遷移
-		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-
-		dxWrapper->SwapchainPresent();
+		// 描画後処理
+		dxWrapper->EndDraw();
 
 
 		// メッセージ処理

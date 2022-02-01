@@ -6,6 +6,8 @@
 
 #include <d3dcompiler.h>
 
+#include "PMD/PMDActor.h"
+
 // その他
 #include "Util/Utility.h"
 #include <assert.h>
@@ -15,7 +17,7 @@
 // Namespace Depend
 //-----------------------------------------------------------------
 using namespace std;
-//using namespace DirectX;
+using namespace DirectX;
 using namespace Microsoft::WRL;
 
 
@@ -318,8 +320,122 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 		scissorrect.bottom = scissorrect.top + wInfo.height;
 	}
 
+
+	{// シーンデータを設定
+		// ワールド行列
+		angleY = 0; // XM_PIDIV4
+		worldMat = XMMatrixRotationY(angleY);
+		// ビュー行列
+		eye = XMFLOAT3(0, 10, -15);
+		target = XMFLOAT3(0, 10, 0);
+		up = XMFLOAT3(0, 1, 0);
+		viewMat = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+		// プロジェクション行列
+		projMat = XMMatrixPerspectiveFovLH(
+			XM_PIDIV2,	//画角は90度
+			static_cast<float>(wInfo.width) / static_cast<float>(wInfo.height),	// アスペクト比
+			1.0f,	// ニアクリップ
+			100.0f	// ファークリップ
+		);
+	}
+
+
 	m_isInitialized = true;
 	return true;
+}
+
+
+//! @brief シーンデータをセット
+void Dx12Wrapper::SetSceneData() {
+	// とりあえず回転させておく
+	angleY += 0.01f;
+	worldMat = XMMatrixRotationY(angleY);
+
+	// セット
+	mapMatrix->world = worldMat;
+	mapMatrix->view = viewMat;
+	mapMatrix->proj = projMat;
+	mapMatrix->eye = eye;
+}
+
+//! @brief 描画前処理
+void Dx12Wrapper::BeginDraw() {
+	// レンダーターゲットをバックバッファにセット
+		// 現在のバックバッファを取得
+	const SIZE_T bbIdx = m_swapchain->GetCurrentBackBufferIndex(); // バッファは２つなので、0か1のはず
+
+	// リソースバリアでバッファの使い道を GPU に通知する
+	D3D12_RESOURCE_BARRIER BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
+		_backBuffers[bbIdx], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+	m_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
+
+	// レンダーターゲットとして指定する
+	auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
+	rtvH.ptr += bbIdx * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	// 深度バッファビューを関連付け
+	auto dsvHandle = dsvHeap->GetCPUDescriptorHandleForHeapStart();
+	m_cmdList->OMSetRenderTargets(1, &rtvH, true, &dsvHandle);
+	// 深度バッファのクリア
+	m_cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+	// レンダーターゲットを指定色でクリア
+	float clearColor[] = { 1.0f, 1.0f, 1.0f, 1.0f }; //白色
+	m_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
+
+	m_cmdList->RSSetViewports(1, &viewport);
+	m_cmdList->RSSetScissorRects(1, &scissorrect);
+}
+
+//! @brief 描画
+	//! @param[in] actor 描画対象
+void Dx12Wrapper::Draw(const DrawActorInfo& drawInfo) {
+	m_cmdList->IASetVertexBuffers(0, 1, drawInfo.vbView);
+	m_cmdList->IASetIndexBuffer(drawInfo.ibView);
+
+	{// 描画時の設定
+		ID3D12DescriptorHeap* bdh[] = { basicDescHeap.Get() };
+		m_cmdList->SetDescriptorHeaps(1, bdh);
+		m_cmdList->SetGraphicsRootDescriptorTable(0, basicDescHeap->GetGPUDescriptorHandleForHeapStart());
+
+		// マテリアル
+		ID3D12DescriptorHeap* mdh[] = { drawInfo.materialDescHeap };
+		m_cmdList->SetDescriptorHeaps(1, mdh);
+
+		auto materialHandle = drawInfo.materialDescHeap->GetGPUDescriptorHandleForHeapStart();
+		unsigned int idxOffset = 0;
+		auto cbvsrvIncSize = m_device->GetDescriptorHandleIncrementSize(drawInfo.descHeapType);
+		cbvsrvIncSize *= drawInfo.incCount;	//CBV, SRV, SRV, SRV, SRV の５つ分
+
+		for (auto& m : *(drawInfo.materials)) {
+			m_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
+			m_cmdList->DrawIndexedInstanced(m.indicesNum, 1, idxOffset, 0, 0);
+
+			// ヒープポインタとインデックスを次に進める
+			materialHandle.ptr += cbvsrvIncSize;
+			idxOffset += m.indicesNum;
+		}
+	}
+}
+
+//! @brief 描画終了時処理
+void Dx12Wrapper::EndDraw() {
+	const SIZE_T bbIdx = m_swapchain->GetCurrentBackBufferIndex();
+
+	// リソースバリアでバッファの使い道を GPU に通知する
+	D3D12_RESOURCE_BARRIER BarrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(
+		_backBuffers[bbIdx], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT
+	);
+	m_cmdList->ResourceBarrier(1, &BarrierDesc); //バリア指定実行
+
+	m_cmdList->Close();
+	ExecuteCommandList();
+	ResetCommandList();
+
+	BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+
+	SwapchainPresent();
 }
 
 

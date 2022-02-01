@@ -20,6 +20,9 @@ public:
 	// @note このクラスを使用する前に一度必ず呼び出すこと
 	bool Init(ID3D12Device* device);
 
+	//! @brief 描画前処理
+	void BeginDraw(ID3D12GraphicsCommandList* cmdList);
+
 
 	//----------------------------------------------------
 	// メンバ変数

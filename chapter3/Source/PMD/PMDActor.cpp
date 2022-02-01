@@ -632,3 +632,15 @@ bool PMDActor::Init(ID3D12Device* device) {
 
 	return true;
 }
+
+
+//! @brief •`‰æî•ñæ“¾
+void PMDActor::GetDrawInfo(DrawActorInfo& output) const {
+	output.topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	output.vbView = &m_vbView;
+	output.ibView = &m_ibView;
+	output.descHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	output.incCount = 5;
+	output.materialDescHeap = m_materialDescHeap.Get();
+	output.materials = &m_materials;
+}
