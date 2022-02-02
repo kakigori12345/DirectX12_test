@@ -12,6 +12,10 @@
 
 class PMDRenderer {
 	SINGLETON_HEADER(PMDRenderer)
+
+	template<typename T>
+	using ComPtr = Microsoft::WRL::ComPtr<T>;
+
 	//----------------------------------------------------
 	// メソッド
 	//----------------------------------------------------
@@ -23,6 +27,9 @@ public:
 	//! @brief 描画前処理
 	void BeginDraw(ID3D12GraphicsCommandList* cmdList);
 
+private:
+	//! @brief シェーダーファイルの読み込み
+	bool _LoadShader();
 
 	//----------------------------------------------------
 	// メンバ変数
@@ -31,11 +38,11 @@ private:
 	bool m_isInitialized;
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12RootSignature>			m_rootSignature;
-	Microsoft::WRL::ComPtr<ID3DBlob>					m_rootSigBlob;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelinestate;
+	ComPtr<ID3D12RootSignature>		m_rootSignature;
+	ComPtr<ID3DBlob>				m_rootSigBlob;
+	ComPtr<ID3D12PipelineState>		m_pipelinestate;
 
-	Microsoft::WRL::ComPtr<ID3DBlob>					m_vsBlob;
-	Microsoft::WRL::ComPtr<ID3DBlob>					m_psBlob;
-	Microsoft::WRL::ComPtr<ID3DBlob>					m_errorBlob;
+	ComPtr<ID3DBlob>				m_vsBlob;
+	ComPtr<ID3DBlob>				m_psBlob;
+	ComPtr<ID3DBlob>				m_errorBlob;
 };

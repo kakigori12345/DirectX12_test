@@ -50,6 +50,9 @@ struct DrawActorInfo {
 
 
 class PMDActor {
+	template<typename T>
+	using ComPtr = Microsoft::WRL::ComPtr<T>;
+
 	//----------------------------------------------------
 	// コンストラクタ関連
 	//----------------------------------------------------
@@ -77,16 +80,16 @@ private:
 	std::string m_modelPath;
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertBuff;
-	Microsoft::WRL::ComPtr<ID3D12Resource>				m_idxBuff;
-	D3D12_VERTEX_BUFFER_VIEW							m_vbView;
-	D3D12_INDEX_BUFFER_VIEW								m_ibView;
+	ComPtr<ID3D12Resource>			m_vertBuff;
+	ComPtr<ID3D12Resource>			m_idxBuff;
+	D3D12_VERTEX_BUFFER_VIEW		m_vbView;
+	D3D12_INDEX_BUFFER_VIEW			m_ibView;
 
-	std::vector<Material>								m_materials;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		m_materialDescHeap;
-	Microsoft::WRL::ComPtr<ID3D12Resource>				m_materialBuff;
+	std::vector<Material>			m_materials;
+	ComPtr<ID3D12DescriptorHeap>	m_materialDescHeap;
+	ComPtr<ID3D12Resource>			m_materialBuff;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_whiteTex;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_blackTex;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_gradTex;
+	ComPtr<ID3D12Resource> m_whiteTex;
+	ComPtr<ID3D12Resource> m_blackTex;
+	ComPtr<ID3D12Resource> m_gradTex;
 };

@@ -49,54 +49,8 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 	assert(!m_isInitialized);
 	HRESULT result = S_OK;
 
-	{// シェーダーの読み込みと生成
-		result = D3DCompileFromFile(
-			L"Resource/BasicVertexShader.hlsl",
-			nullptr,
-			D3D_COMPILE_STANDARD_FILE_INCLUDE,
-			"BasicVS",
-			"vs_5_0",
-			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
-			0,
-			&m_vsBlob,
-			&m_errorBlob);
-		if (result != S_OK) {
-			// 詳細なエラー表示
-			std::string errstr;
-			errstr.resize(m_errorBlob->GetBufferSize());
-			std::copy_n(
-				(char*)m_errorBlob->GetBufferPointer(),
-				m_errorBlob->GetBufferSize(),
-				errstr.begin());
-			OutputDebugStringA(errstr.c_str());
-
-			DebugOutputFormatString("Missed at Compiling Vertex Shader.");
-			return false;
-		}
-
-		result = D3DCompileFromFile(
-			L"Resource/BasicPixelShader.hlsl",
-			nullptr,
-			D3D_COMPILE_STANDARD_FILE_INCLUDE,
-			"BasicPS",
-			"ps_5_0",
-			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
-			0,
-			&m_psBlob,
-			&m_errorBlob);
-		if (result != S_OK) {
-			// 詳細なエラー表示
-			std::string errstr;
-			errstr.resize(m_errorBlob->GetBufferSize());
-			std::copy_n(
-				(char*)m_errorBlob->GetBufferPointer(),
-				m_errorBlob->GetBufferSize(),
-				errstr.begin());
-			OutputDebugStringA(errstr.c_str());
-
-			DebugOutputFormatString("Missed at Compiling Pixel Shader.");
-			return false;
-		}
+	if (!_LoadShader()) {
+		return false;
 	}
 
 	{// グラフィクスパイプラインを作成
@@ -204,4 +158,60 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 void PMDRenderer::BeginDraw(ID3D12GraphicsCommandList* cmdList) {
 	cmdList->SetPipelineState(m_pipelinestate.Get());
 	cmdList->SetGraphicsRootSignature(m_rootSignature.Get());
+}
+
+
+//! @brief シェーダーファイルの読み込み
+bool PMDRenderer::_LoadShader() {
+	HRESULT result = S_OK;
+
+	result = D3DCompileFromFile(
+		L"Resource/BasicVertexShader.hlsl",
+		nullptr,
+		D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		"BasicVS",
+		"vs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
+		0,
+		&m_vsBlob,
+		&m_errorBlob);
+	if (result != S_OK) {
+		// 詳細なエラー表示
+		std::string errstr;
+		errstr.resize(m_errorBlob->GetBufferSize());
+		std::copy_n(
+			(char*)m_errorBlob->GetBufferPointer(),
+			m_errorBlob->GetBufferSize(),
+			errstr.begin());
+		OutputDebugStringA(errstr.c_str());
+
+		DebugOutputFormatString("Missed at Compiling Vertex Shader.");
+		return false;
+	}
+
+	result = D3DCompileFromFile(
+		L"Resource/BasicPixelShader.hlsl",
+		nullptr,
+		D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		"BasicPS",
+		"ps_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, //デバッグ用 および 最適化なし
+		0,
+		&m_psBlob,
+		&m_errorBlob);
+	if (result != S_OK) {
+		// 詳細なエラー表示
+		std::string errstr;
+		errstr.resize(m_errorBlob->GetBufferSize());
+		std::copy_n(
+			(char*)m_errorBlob->GetBufferPointer(),
+			m_errorBlob->GetBufferSize(),
+			errstr.begin());
+		OutputDebugStringA(errstr.c_str());
+
+		DebugOutputFormatString("Missed at Compiling Pixel Shader.");
+		return false;
+	}
+
+	return true;
 }
