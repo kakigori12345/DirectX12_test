@@ -239,6 +239,7 @@ bool PMDActor::Init(ID3D12Device* device) {
 	}
 
 
+	// REFACTOR: ここから↓を別関数にまとめれそう。テクスチャリソースはメンバにする必要あり
 	// マテリアルバッファを作成
 	auto materialBuffSize = sizeof(MaterialForHlsl);
 	materialBuffSize = (materialBuffSize + 0xff) & ~0xff;
