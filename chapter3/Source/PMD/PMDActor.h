@@ -88,8 +88,4 @@ private:
 	std::vector<Material>			m_materials;
 	ComPtr<ID3D12DescriptorHeap>	m_materialDescHeap;
 	ComPtr<ID3D12Resource>			m_materialBuff;
-
-	ComPtr<ID3D12Resource> m_whiteTex;
-	ComPtr<ID3D12Resource> m_blackTex;
-	ComPtr<ID3D12Resource> m_gradTex;
 };

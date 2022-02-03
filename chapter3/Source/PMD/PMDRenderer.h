@@ -8,7 +8,7 @@
 #include <d3d12.h>
 
 #include <wrl.h>
-
+#include <string>
 
 class PMDRenderer {
 	SINGLETON_HEADER(PMDRenderer)
@@ -27,9 +27,24 @@ public:
 	//! @brief 描画前処理
 	void BeginDraw(ID3D12GraphicsCommandList* cmdList);
 
+	enum class TextureType {
+		White,
+		Black,
+		Grad,
+	};
+	//! @brief デフォルトテクスチャ取得
+	ID3D12Resource* GetDefaultTexture(TextureType type);
+
+public: 
+	//! @brief テクスチャをロードしてリソースを作成する
+	static ID3D12Resource* LoadTextureFromFile(const std::string& texPath, ID3D12Device* dev);
+
 private:
 	//! @brief シェーダーファイルの読み込み
 	bool _LoadShader();
+
+	//! @brief テクスチャタイプごとの読み込み関数をセットする
+	void _SetTextureLoader() const;
 
 	//----------------------------------------------------
 	// メンバ変数
@@ -45,4 +60,8 @@ private:
 	ComPtr<ID3DBlob>				m_vsBlob;
 	ComPtr<ID3DBlob>				m_psBlob;
 	ComPtr<ID3DBlob>				m_errorBlob;
+
+	ComPtr<ID3D12Resource> m_whiteTex;
+	ComPtr<ID3D12Resource> m_blackTex;
+	ComPtr<ID3D12Resource> m_gradTex;
 };

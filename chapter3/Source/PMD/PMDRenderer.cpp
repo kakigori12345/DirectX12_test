@@ -6,21 +6,155 @@
 
 #include <d3dx12.h>
 #include <d3dcompiler.h>
+#include <DirectXTex.h>
 
 // その他
 #include "PMD/VertexLayoutDef.h"
 #include "Util/Utility.h"
 #include <assert.h>
+#include <map>
 
 
 //-----------------------------------------------------------------
 // Namespace Depend
 //-----------------------------------------------------------------
 using namespace std;
+using namespace DirectX;
 
 //-----------------------------------------------------------------
 // Method Definition
 //-----------------------------------------------------------------
+
+namespace {
+	using LoadLambda_t = function<HRESULT(const wstring& path, TexMetadata*, ScratchImage&)>;
+	std::map<string, LoadLambda_t> loadLambdaTable;
+
+	// 白テクスチャ作成
+	ID3D12Resource* CreateWhiteTexture(ID3D12Device* dev) {
+		D3D12_HEAP_PROPERTIES texHeapProp = CD3DX12_HEAP_PROPERTIES(
+			D3D12_CPU_PAGE_PROPERTY_WRITE_BACK,
+			D3D12_MEMORY_POOL_L0);
+
+		D3D12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			DXGI_FORMAT_R8G8B8A8_UNORM, 4, 4);
+
+		ID3D12Resource* whiteBuff = nullptr;
+		auto result = dev->CreateCommittedResource(
+			&texHeapProp,
+			D3D12_HEAP_FLAG_NONE,
+			&resDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			nullptr,
+			IID_PPV_ARGS(&whiteBuff)
+		);
+
+		if (FAILED(result)) {
+			return nullptr;
+		}
+
+		std::vector<unsigned char> data(4 * 4 * 4);
+		std::fill(data.begin(), data.end(), 0xff);	//全部255で埋める
+
+		// データ転送
+		result = whiteBuff->WriteToSubresource(
+			0,
+			nullptr,
+			data.data(),
+			4 * 4,
+			data.size()
+		);
+
+		return whiteBuff;
+	}
+
+
+	// 黒テクスチャ作成
+	ID3D12Resource* CreateBlackTexture(ID3D12Device* dev) {
+		D3D12_HEAP_PROPERTIES texHeapProp = CD3DX12_HEAP_PROPERTIES(
+			D3D12_CPU_PAGE_PROPERTY_WRITE_BACK,
+			D3D12_MEMORY_POOL_L0);
+
+		D3D12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			DXGI_FORMAT_R8G8B8A8_UNORM, 4, 4);
+
+		ID3D12Resource* blackBuff = nullptr;
+		auto result = dev->CreateCommittedResource(
+			&texHeapProp,
+			D3D12_HEAP_FLAG_NONE,
+			&resDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			nullptr,
+			IID_PPV_ARGS(&blackBuff)
+		);
+
+		if (FAILED(result)) {
+			return nullptr;
+		}
+
+		std::vector<unsigned char> data(4 * 4 * 4);
+		std::fill(data.begin(), data.end(), 0x00);	//全部0で埋める
+
+		// データ転送
+		result = blackBuff->WriteToSubresource(
+			0,
+			nullptr,
+			data.data(),
+			4 * 4,
+			data.size()
+		);
+
+		return blackBuff;
+	}
+
+
+	// デフォルトグラデーションテクスチャ（トゥーン用）
+	ID3D12Resource* CreateGrayGradationTexture(ID3D12Device* dev) {
+		D3D12_HEAP_PROPERTIES texHeapProp = CD3DX12_HEAP_PROPERTIES(
+			D3D12_CPU_PAGE_PROPERTY_WRITE_BACK,
+			D3D12_MEMORY_POOL_L0);
+
+		D3D12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			DXGI_FORMAT_R8G8B8A8_UNORM, 4, 256);
+
+		ID3D12Resource* gradBuff = nullptr;
+		auto result = dev->CreateCommittedResource(
+			&texHeapProp,
+			D3D12_HEAP_FLAG_NONE,
+			&resDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			nullptr,
+			IID_PPV_ARGS(&gradBuff)
+		);
+
+		if (FAILED(result)) {
+			return nullptr;
+		}
+
+		std::vector<unsigned char> data(4 * 256);
+		auto it = data.begin();
+		unsigned int c = 0xff;
+		for (; it != data.end(); it += 4) {
+			auto test1 = c << 24;
+			auto test2 = c << 16;
+			auto test3 = c << 8;
+			auto col = (c << 24) | (c << 16) | (c << 8) | c;
+			fill(it, it + 4, col);
+			--c;
+		}
+
+		// データ転送
+		result = gradBuff->WriteToSubresource(
+			0,
+			nullptr,
+			data.data(),
+			4 * sizeof(unsigned int),
+			sizeof(unsigned int) * data.size()
+		);
+
+		return gradBuff;
+	}
+}
+
 
 //! @brief コンストラクタ
 PMDRenderer::PMDRenderer() 
@@ -30,7 +164,10 @@ PMDRenderer::PMDRenderer()
 	, m_pipelinestate(nullptr)
 	, m_vsBlob(nullptr)
 	, m_psBlob(nullptr)
-	, m_errorBlob(nullptr) {
+	, m_errorBlob(nullptr)
+	, m_whiteTex(nullptr)
+	, m_blackTex(nullptr)
+	, m_gradTex(nullptr){
 }
 
 //! @brief デストラクタ
@@ -52,6 +189,13 @@ bool PMDRenderer::Init(ID3D12Device* device) {
 	if (!_LoadShader()) {
 		return false;
 	}
+
+	_SetTextureLoader();
+
+	// デフォルトテクスチャ作成
+	m_whiteTex = CreateWhiteTexture(device);
+	m_blackTex = CreateBlackTexture(device);
+	m_gradTex = CreateGrayGradationTexture(device);
 
 	{// グラフィクスパイプラインを作成
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeline = {};
@@ -160,6 +304,101 @@ void PMDRenderer::BeginDraw(ID3D12GraphicsCommandList* cmdList) {
 	cmdList->SetGraphicsRootSignature(m_rootSignature.Get());
 }
 
+//! @brief 指定されたテクスチャを取得
+ID3D12Resource* PMDRenderer::GetDefaultTexture(TextureType type) {
+	switch (type) {
+	case TextureType::White:
+		return m_whiteTex.Get();
+	case TextureType::Black:
+		return m_blackTex.Get();
+	case TextureType::Grad:
+		return m_gradTex.Get();
+	default:
+		assert(false);
+	}
+
+	return nullptr;
+}
+
+//! @brief テクスチャをロードしてリソースを作成する
+ID3D12Resource* PMDRenderer::LoadTextureFromFile(const string& texPath, ID3D12Device* dev) {
+
+	// 読み込んだテクスチャを保存しておくコンテナ
+	static map<string, ID3D12Resource*> resourceTable;
+
+	// すでに読み込み済みならそれを返す
+	auto it = resourceTable.find(texPath);
+	if (it != resourceTable.end()) {
+		// テーブル内にあるのでマップ内のリソースを返す
+		return it->second;
+	}
+
+	// WICテクスチャのロード
+	TexMetadata metadata = {};
+	ScratchImage scratchImg = {};
+
+	wstring wtexpath = GetWideStringFromString(texPath).c_str();
+	string extension = GetExtension(texPath);
+
+	// ファイルパスの指定、拡張子がない場合のエラーチェック
+	assert(wtexpath.size() != 0 && extension.size() != 0);
+
+	auto result = loadLambdaTable[extension](
+		wtexpath,
+		&metadata,
+		scratchImg
+		);
+
+	if (FAILED(result)) {
+		return nullptr;
+	}
+
+	auto img = scratchImg.GetImage(0, 0, 0);	//生データ抽出
+
+	// WriteToSubresource で転送する用のヒープ設定
+	D3D12_HEAP_PROPERTIES texHeapProp = CD3DX12_HEAP_PROPERTIES(
+		D3D12_CPU_PAGE_PROPERTY_WRITE_BACK,
+		D3D12_MEMORY_POOL_L0);
+
+	D3D12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		metadata.format,
+		metadata.width,
+		metadata.height,
+		metadata.arraySize,
+		metadata.mipLevels);
+
+	// バッファ作成
+	ID3D12Resource* texBuff = nullptr;
+	result = dev->CreateCommittedResource(
+		&texHeapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		nullptr,
+		IID_PPV_ARGS(&texBuff)
+	);
+
+	if (FAILED(result)) {
+		return nullptr;
+	}
+
+	result = texBuff->WriteToSubresource(
+		0,
+		nullptr,		//全領域へコピー
+		img->pixels,	//元データアドレス
+		img->rowPitch,	//1ラインサイズ
+		img->slicePitch	//全サイズ
+	);
+
+	if (FAILED(result)) {
+		return nullptr;
+	}
+
+	// テーブルに保存しておく
+	resourceTable[texPath] = texBuff;
+	return texBuff;
+}
+
 
 //! @brief シェーダーファイルの読み込み
 bool PMDRenderer::_LoadShader() {
@@ -214,4 +453,30 @@ bool PMDRenderer::_LoadShader() {
 	}
 
 	return true;
+}
+
+//! @brief テクスチャタイプごとの読み込み関数をセットする
+void PMDRenderer::_SetTextureLoader() const {
+	// テクスチャファイルの種類ごとに別々の読み込み関数を使用する
+	loadLambdaTable["sph"]
+		= loadLambdaTable["spa"]
+		= loadLambdaTable["bmp"]
+		= loadLambdaTable["png"]
+		= loadLambdaTable["jpg"]
+		= [](const wstring& path, TexMetadata* meta, ScratchImage& img)->HRESULT
+	{
+		return LoadFromWICFile(path.c_str(), WIC_FLAGS_NONE, meta, img);
+	};
+
+	loadLambdaTable["tga"]
+		= [](const wstring& path, TexMetadata* meta, ScratchImage& img)->HRESULT
+	{
+		return LoadFromTGAFile(path.c_str(), meta, img);
+	};
+
+	loadLambdaTable["dds"]
+		= [](const wstring& path, TexMetadata* meta, ScratchImage& img)->HRESULT
+	{
+		return LoadFromDDSFile(path.c_str(), DDS_FLAGS_NONE, meta, img);
+	};
 }
