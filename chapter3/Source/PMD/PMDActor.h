@@ -44,8 +44,16 @@ struct DrawActorInfo {
 	const D3D12_INDEX_BUFFER_VIEW* ibView;
 	D3D12_DESCRIPTOR_HEAP_TYPE descHeapType;
 	unsigned int incCount;
+	ID3D12DescriptorHeap* transformDescHeap;
 	ID3D12DescriptorHeap* materialDescHeap;
 	const std::vector<Material>* materials;
+};
+
+struct Transform {
+	//内部に持ってるXMMATRIXメンバが16バイトアライメントであるため
+	//Transformをnewする際には16バイト境界に確保する
+	void* operator new(size_t size);
+	DirectX::XMMATRIX world;
 };
 
 
@@ -72,12 +80,28 @@ public:
 	//! @brief 描画情報取得
 	void GetDrawInfo(DrawActorInfo& output) const;
 
+	//! @brief 描画情報更新
+	void Update();
+
+private:
+	//座標変換用ビューの生成
+	bool _CreateTransformView(ID3D12Device* device);
+
 
 	//----------------------------------------------------
 	// メンバ変数
 	//----------------------------------------------------
 private:
 	std::string m_modelPath;
+	float		m_angleY;
+
+private:
+	Transform						m_transform;
+	Transform*						m_mappedTransform;
+	ComPtr<ID3D12Resource>			m_transformBuff;
+
+	ComPtr<ID3D12Resource>			m_transformMat;//座標変換行列(今はワールドのみ)
+	ComPtr<ID3D12DescriptorHeap>	m_transformHeap;//座標変換ヒープ
 
 private:
 	ComPtr<ID3D12Resource>			m_vertBuff;

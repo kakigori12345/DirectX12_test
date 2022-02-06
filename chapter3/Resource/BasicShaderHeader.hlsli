@@ -8,16 +8,18 @@ Texture2D<float4> toon: register(t3);	//3 ''
 SamplerState smp : register(s0);		//0 番スロットに設定されたサンプラー
 SamplerState smpToon : register(s1);	//1 ''（トゥーン用）
 
-cbuffer SceneBuffer : register(b0) {			//定数バッファー0
-	matrix world;
+
+//定数バッファー
+cbuffer SceneBuffer : register(b0) {
 	matrix view;
 	matrix proj;
-	float3 m_eye;
+	float3 eye;
 }
-
-// 定数バッファ1
+cbuffer Transform : register(b1) {
+	matrix world;
+}
 // マテリアル用
-cbuffer Material : register(b1) {
+cbuffer Material : register(b2) {
 	float4 diffuse;		//ディヒューズ色
 	float4 specular;	//スペキュラ
 	float3 ambient;		//アンビエント

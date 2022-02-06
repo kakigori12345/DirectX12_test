@@ -436,15 +436,17 @@ bool PMDRenderer::_CreatePipeline(ID3D12Device* device) {
 	// ディスクリプタテーブルレンジの作成
 	//メモ：ここでの分け方は、同じ種類かつ同じレジスタならまとめているのだと思う。
 	// 	    テクスチャは種類が全部同じで、かつ扱うレジスタも同じなので、複数のディスクリプタを使っている。	
-	CD3DX12_DESCRIPTOR_RANGE descTblRange[3] = {};	//テクスチャと定数で２つ
-	descTblRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0); // 座標変換[b0]
-	descTblRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // マテリアル[b1]
-	descTblRange[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0); // テクスチャ４つ
+	CD3DX12_DESCRIPTOR_RANGE descTblRange[4] = {};
+	descTblRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0); // 定数[b0]（ビュープロジェクション）
+	descTblRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // 定数[b1]（ワールド、ボーン）
+	descTblRange[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2); // マテリアル[b2]
+	descTblRange[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0); // テクスチャ４つ
 
 	// ルートパラメータの作成
-	CD3DX12_ROOT_PARAMETER rootparam[2] = {};
-	rootparam[0].InitAsDescriptorTable(1, &descTblRange[0]);	// 座標変換
-	rootparam[1].InitAsDescriptorTable(2, &descTblRange[1]);	// マテリアル周り
+	CD3DX12_ROOT_PARAMETER rootparam[3] = {};
+	rootparam[0].InitAsDescriptorTable(1, &descTblRange[0]);	// ビュープロジェクション
+	rootparam[1].InitAsDescriptorTable(1, &descTblRange[1]);	// ワールド、ボーン
+	rootparam[2].InitAsDescriptorTable(2, &descTblRange[2]);	// マテリアル周り
 
 	// サンプラーの作成
 	CD3DX12_STATIC_SAMPLER_DESC samplerDesc[2] = {};
@@ -455,7 +457,7 @@ bool PMDRenderer::_CreatePipeline(ID3D12Device* device) {
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
 	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 	rootSignatureDesc.pParameters = rootparam;	//ルートパラメータの先頭アドレス
-	rootSignatureDesc.NumParameters = 2;		//ルートパラメータの数
+	rootSignatureDesc.NumParameters = 3;		//ルートパラメータの数
 	rootSignatureDesc.pStaticSamplers = samplerDesc;
 	rootSignatureDesc.NumStaticSamplers = 2;
 

@@ -52,11 +52,9 @@ Dx12Wrapper::Dx12Wrapper()
 	, m_dsvHeap(nullptr)
 	, m_viewport()
 	, m_scissorrect()
-	, m_angleY(0)
 	, m_eye()
 	, m_target()
 	, m_up()
-	, m_worldMat()
 	, m_viewMat()
 	, m_projMat(){
 }
@@ -92,6 +90,10 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 		return false;
 	}
 
+	if (!_CreateRenderTarget()) {
+		return false;
+	}
+
 	if (!_CreateView()) {
 		return false;
 	}
@@ -99,8 +101,6 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 	if (!_CreateDepthStencilView()) {
 		return false;
 	}
-
-	_CreateViewport();
 
 	_InitlalizeSceneData();
 
@@ -112,12 +112,7 @@ bool Dx12Wrapper::Init(HWND hwnd) {
 
 //! @brief シーンデータをセット
 void Dx12Wrapper::SetSceneData() {
-	// とりあえず回転させておく
-	m_angleY += 0.01f;
-	m_worldMat = XMMatrixRotationY(m_angleY);
-
 	// セット
-	m_mapMatrix->world = m_worldMat;
 	m_mapMatrix->view = m_viewMat;
 	m_mapMatrix->proj = m_projMat;
 	m_mapMatrix->eye = m_eye;
@@ -155,13 +150,21 @@ void Dx12Wrapper::BeginDraw() {
 //! @brief 描画
 	//! @param[in] actor 描画対象
 void Dx12Wrapper::Draw(const DrawActorInfo& drawInfo) {
+	m_cmdList->IASetPrimitiveTopology(drawInfo.topology);
 	m_cmdList->IASetVertexBuffers(0, 1, drawInfo.vbView);
 	m_cmdList->IASetIndexBuffer(drawInfo.ibView);
 
 	{// 描画時の設定
+		// シーンデータ
 		ID3D12DescriptorHeap* bdh[] = { m_basicDescHeap.Get() };
 		m_cmdList->SetDescriptorHeaps(1, bdh);
 		m_cmdList->SetGraphicsRootDescriptorTable(0, m_basicDescHeap->GetGPUDescriptorHandleForHeapStart());
+
+		// 以下モデルデータ
+		// ワールド
+		ID3D12DescriptorHeap* transHeaps[] = { drawInfo.transformDescHeap };
+		m_cmdList->SetDescriptorHeaps(1, transHeaps);
+		m_cmdList->SetGraphicsRootDescriptorTable(1, drawInfo.transformDescHeap->GetGPUDescriptorHandleForHeapStart());
 
 		// マテリアル
 		ID3D12DescriptorHeap* mdh[] = { drawInfo.materialDescHeap };
@@ -173,7 +176,7 @@ void Dx12Wrapper::Draw(const DrawActorInfo& drawInfo) {
 		cbvsrvIncSize *= drawInfo.incCount;	//CBV, SRV, SRV, SRV, SRV の５つ分
 
 		for (auto& m : *(drawInfo.materials)) {
-			m_cmdList->SetGraphicsRootDescriptorTable(1, materialHandle);
+			m_cmdList->SetGraphicsRootDescriptorTable(2, materialHandle);
 			m_cmdList->DrawIndexedInstanced(m.indicesNum, 1, idxOffset, 0, 0);
 
 			// ヒープポインタとインデックスを次に進める
@@ -215,6 +218,10 @@ ID3D12GraphicsCommandList* Dx12Wrapper::GetCommandList() {
 	return m_cmdList.Get();
 }
 
+
+//---------------------------------------------------------
+// デバイスの生成系
+//---------------------------------------------------------
 
 bool Dx12Wrapper::_CreateDevice() {
 	HRESULT result;
@@ -340,47 +347,57 @@ bool Dx12Wrapper::_CreateSwapchain(HWND hwnd) {
 	return true;
 }
 
-bool Dx12Wrapper::_CreateView() {
+bool Dx12Wrapper::_CreateRenderTarget() {
 	HRESULT result = S_OK;
 
-	{// ディスクリプタヒープの作成
-		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+	// ディスクリプタヒープの作成
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 
-		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; //レンダーターゲットビュー
-		heapDesc.NodeMask = 0;
-		heapDesc.NumDescriptors = 2; //表裏の２つ
-		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; //レンダーターゲットビュー
+	heapDesc.NodeMask = 0;
+	heapDesc.NumDescriptors = 2; //表裏の２つ
+	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
-		result = m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(m_rtvHeaps.ReleaseAndGetAddressOf())); //この段階ではまだ RTV ではない
-		if (result != S_OK) {
-			DebugOutputFormatString("Missed at Creating DescriptorHeap.");
-			return false;
-		}
-
-		// sRGB 用のレンダーターゲットビュー設定を作成しておく
-		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-		rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;	//ガンマ補正あり
-		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		// スワップチェーンとビューの関連付け
-		m_backBuffers.resize(COMMAND_BUFFER_COUNT);
-		D3D12_CPU_DESCRIPTOR_HANDLE handle = m_rtvHeaps->GetCPUDescriptorHandleForHeapStart();
-		for (UINT idx = 0; idx < COMMAND_BUFFER_COUNT; ++idx) {
-			result = m_swapchain->GetBuffer(idx, IID_PPV_ARGS(&m_backBuffers[idx]));
-			if (result != S_OK) {
-				DebugOutputFormatString("Missed at Getting BackBuffer.");
-				return false;
-			}
-			// 先ほど作成したディスクリプタヒープを RTV として設定する
-			rtvDesc.Format = m_backBuffers[idx]->GetDesc().Format;
-			m_device->CreateRenderTargetView(
-				m_backBuffers[idx],
-				&rtvDesc,
-				handle);
-			// ハンドルを一つずらす
-			handle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		}
+	result = m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(m_rtvHeaps.ReleaseAndGetAddressOf())); //この段階ではまだ RTV ではない
+	if (result != S_OK) {
+		DebugOutputFormatString("Missed at Creating DescriptorHeap.");
+		return false;
 	}
 
+	// sRGB 用のレンダーターゲットビュー設定を作成しておく
+	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;	//ガンマ補正あり
+	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	// スワップチェーンとビューの関連付け
+	m_backBuffers.resize(COMMAND_BUFFER_COUNT);
+	D3D12_CPU_DESCRIPTOR_HANDLE handle = m_rtvHeaps->GetCPUDescriptorHandleForHeapStart();
+	for (UINT idx = 0; idx < COMMAND_BUFFER_COUNT; ++idx) {
+		result = m_swapchain->GetBuffer(idx, IID_PPV_ARGS(&m_backBuffers[idx]));
+		if (result != S_OK) {
+			DebugOutputFormatString("Missed at Getting BackBuffer.");
+			return false;
+		}
+		// 先ほど作成したディスクリプタヒープを RTV として設定する
+		rtvDesc.Format = m_backBuffers[idx]->GetDesc().Format;
+		m_device->CreateRenderTargetView(
+			m_backBuffers[idx],
+			&rtvDesc,
+			handle);
+		// ハンドルを一つずらす
+		handle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	}
+
+	m_viewport = CD3DX12_VIEWPORT{ m_backBuffers[0] };
+	m_scissorrect.top = 0;
+	m_scissorrect.left = 0;
+	m_scissorrect.right = m_scissorrect.left + m_windowInfo.width;
+	m_scissorrect.bottom = m_scissorrect.top + m_windowInfo.height;
+
+	return true;
+}
+
+bool Dx12Wrapper::_CreateView() {
+	HRESULT result = S_OK;
 
 	{// シェーダーリソースビュー
 		D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc = {};
@@ -490,20 +507,7 @@ bool Dx12Wrapper::_CreateDepthStencilView() {
 	return true;
 }
 
-bool Dx12Wrapper::_CreateViewport() {
-	m_viewport = CD3DX12_VIEWPORT{ m_backBuffers[0] };
-	m_scissorrect.top = 0;
-	m_scissorrect.left = 0;
-	m_scissorrect.right = m_scissorrect.left + m_windowInfo.width;
-	m_scissorrect.bottom = m_scissorrect.top + m_windowInfo.height;
-
-	return true;
-}
-
 bool Dx12Wrapper::_InitlalizeSceneData() {
-	// ワールド行列
-	m_angleY = 0; // XM_PIDIV4
-	m_worldMat = XMMatrixRotationY(m_angleY);
 	// ビュー行列
 	m_eye = XMFLOAT3(0, 10, -15);
 	m_target = XMFLOAT3(0, 10, 0);

@@ -37,7 +37,6 @@ class Dx12Wrapper {
 	// シェーダー側に渡すための基本的な行列データ
 	struct SceneData {
 		// TODO: 16バイトアライメントを施す
-		DirectX::XMMATRIX world;
 		DirectX::XMMATRIX view;
 		DirectX::XMMATRIX proj;
 		DirectX::XMFLOAT3 eye;
@@ -71,9 +70,9 @@ private: // 必要なオブジェクトの生成
 	bool _CreateDevice();
 	bool _CreateCommandContainer();
 	bool _CreateSwapchain(HWND hwnd);
+	bool _CreateRenderTarget();
 	bool _CreateView();
 	bool _CreateDepthStencilView();
-	bool _CreateViewport();
 	bool _InitlalizeSceneData();
 
 private:
@@ -118,11 +117,9 @@ private:
 	D3D12_RECT							m_scissorrect;
 
 private:
-	float								m_angleY;
 	DirectX::XMFLOAT3					m_eye;
 	DirectX::XMFLOAT3					m_target;
 	DirectX::XMFLOAT3					m_up;
-	DirectX::XMMATRIX					m_worldMat;
 	DirectX::XMMATRIX					m_viewMat;
 	DirectX::XMMATRIX					m_projMat;
 };

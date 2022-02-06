@@ -127,17 +127,18 @@ void Application::Run() {
 	MSG msg = {};
 
 	while (true) {
+		// XVˆ—
 		dxWrapper->SetSceneData();
+		actor.Update();
+
 
 		// •`‰æ‘Oˆ—
 		dxWrapper->BeginDraw();
 		renderer->BeginDraw(_cmdList);
-
 		// •`‰æ
 		DrawActorInfo drawInfo;
 		actor.GetDrawInfo(drawInfo);
 		dxWrapper->Draw(drawInfo);
-
 		// •`‰æŒãˆ—
 		dxWrapper->EndDraw();
 

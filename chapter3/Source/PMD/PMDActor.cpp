@@ -22,9 +22,20 @@ using namespace DirectX;
 // Method Definition
 //-----------------------------------------------------------------
 
+void*
+Transform::operator new(size_t size) {
+	return _aligned_malloc(size, 16);
+}
+
 //! @brief コンストラクタ
 PMDActor::PMDActor(string modelPath)
 	: m_modelPath(modelPath)
+	, m_angleY(0.0f)
+	, m_transform()
+	, m_mappedTransform(nullptr)
+	, m_transformBuff(nullptr)
+	, m_transformMat(nullptr)
+	, m_transformHeap(nullptr)
 	, m_vertBuff(nullptr)
 	, m_idxBuff(nullptr)
 	, m_vbView()
@@ -47,6 +58,10 @@ bool PMDActor::Init(ID3D12Device* device) {
 	}
 
 	HRESULT result = S_OK;
+
+	// ワールド座標
+	m_transform.world = XMMatrixIdentity();
+
 
 	// ヘッダ
 	char signature[3] = {};		//シグネチャ
@@ -131,6 +146,12 @@ bool PMDActor::Init(ID3D12Device* device) {
 	m_ibView.BufferLocation = m_idxBuff->GetGPUVirtualAddress();
 	m_ibView.Format = DXGI_FORMAT_R16_UINT;
 	m_ibView.SizeInBytes = indices.size() * sizeof(indices[0]);
+
+
+	// ワールド座標の用意
+	if (!_CreateTransformView(device)) {
+		return false;
+	}
 
 
 	// マテリアル情報を読み込む
@@ -395,11 +416,71 @@ bool PMDActor::Init(ID3D12Device* device) {
 
 //! @brief 描画情報取得
 void PMDActor::GetDrawInfo(DrawActorInfo& output) const {
-	output.topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	output.vbView = &m_vbView;
-	output.ibView = &m_ibView;
+	output.topology		= D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	output.vbView		= &m_vbView;
+	output.ibView		= &m_ibView;
 	output.descHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	output.incCount = 5;
-	output.materialDescHeap = m_materialDescHeap.Get();
-	output.materials = &m_materials;
+	output.incCount		= 5;
+	output.transformDescHeap	= m_transformHeap.Get();
+	output.materialDescHeap		= m_materialDescHeap.Get();
+	output.materials			= &m_materials;
 }
+
+//! @brief 描画情報更新
+void PMDActor::Update() {
+	m_angleY += 0.03f;
+	m_mappedTransform->world = XMMatrixRotationY(m_angleY);
+}
+
+
+//座標変換用ビューの生成
+bool
+PMDActor::_CreateTransformView(ID3D12Device* device) {
+	//GPUバッファ作成
+	auto buffSize = sizeof(Transform);
+	buffSize = (buffSize + 0xff) & ~0xff;
+	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(buffSize);
+
+	auto result = device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(m_transformBuff.ReleaseAndGetAddressOf())
+	);
+	if (FAILED(result)) {
+		assert(SUCCEEDED(result));
+		return false;
+	}
+
+	//マップとコピー
+	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappedTransform);
+	if (FAILED(result)) {
+		assert(SUCCEEDED(result));
+		return false;
+	}
+	*m_mappedTransform = m_transform;
+
+	//ビューの作成
+	D3D12_DESCRIPTOR_HEAP_DESC transformDescHeapDesc = {};
+	transformDescHeapDesc.NumDescriptors = 1;//とりあえずワールドひとつ
+	transformDescHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	transformDescHeapDesc.NodeMask = 0;
+
+	transformDescHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;//デスクリプタヒープ種別
+	result = device->CreateDescriptorHeap(&transformDescHeapDesc, IID_PPV_ARGS(m_transformHeap.ReleaseAndGetAddressOf()));//生成
+	if (FAILED(result)) {
+		assert(SUCCEEDED(result));
+		return false;
+	}
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+	cbvDesc.BufferLocation = m_transformBuff->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = buffSize;
+	device->CreateConstantBufferView(&cbvDesc, m_transformHeap->GetCPUDescriptorHandleForHeapStart());
+
+	return true;
+}
+
