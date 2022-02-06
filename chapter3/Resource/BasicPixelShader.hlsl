@@ -18,12 +18,17 @@ float4 BasicPS(Output input) : SV_TARGET
 	// テクスチャ色
 	float4 texColor = tex.Sample(smp, input.uv);
 
-	return max(saturate(
-		  toonDif								// 輝度
-		* diffuse								// ディヒューズ色
-		* texColor								// テクスチャカラー
-		* sph.Sample(smp, sphereMapUV))			// スフィアマップ（乗算）
-		+ saturate(spa.Sample(smp, sphereMapUV) * texColor	// スフィアマップ（加算）
-		+ float4(specularB * specular.rgb, 1))	// スペキュラ
-		, float4(ambient * texColor, 1));		// アンビエント
+	return max(
+		saturate(
+			  toonDif								// 輝度
+			* diffuse								// ディヒューズ色
+			* texColor								// テクスチャカラー
+			* sph.Sample(smp, sphereMapUV)			// スフィアマップ（乗算）
+		)
+		+ saturate(
+			  spa.Sample(smp, sphereMapUV)		 // スフィアマップ（加算）
+			* texColor	
+			+ float4(specularB * specular.rgb, 1)// スペキュラ
+		)
+		, float4(ambient * texColor, 1));		 // アンビエント
 }

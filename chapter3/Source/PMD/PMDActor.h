@@ -56,6 +56,17 @@ struct Transform {
 	DirectX::XMMATRIX world;
 };
 
+#pragma pack(1)
+struct PMDBone {
+	char boneName[20];		// ボーン名
+	unsigned short parentNo;// 親ボーン番号
+	unsigned short nextNo;	// 先端のボーン番号。方向を示すための情報
+	unsigned char type;		// ボーン種別。今回は「回転」のみを扱う
+	unsigned short ikBoneNo;// IKボーン番号
+	DirectX::XMFLOAT3 pos;			// ボーンの基準点座標
+};
+#pragma pack()
+
 
 class PMDActor {
 	template<typename T>

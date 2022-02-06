@@ -118,7 +118,7 @@ void Application::Run() {
 	ID3D12GraphicsCommandList* _cmdList = dxWrapper->GetCommandList();
 
 	// 仮でモデルを作成
-	PMDActor actor("data/Model/初音ミクmetal.pmd");
+	PMDActor actor("data/Model/初音ミク.pmd");
 	if (!actor.Init(_dev)) {
 		DebugOutputFormatString("Failed Creating Model.");
 		return;

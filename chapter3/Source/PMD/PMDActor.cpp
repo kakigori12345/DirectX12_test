@@ -62,7 +62,9 @@ bool PMDActor::Init(ID3D12Device* device) {
 	// ワールド座標
 	m_transform.world = XMMatrixIdentity();
 
-
+	//----------------------
+	// ファイル読み込み
+	//----------------------
 	// ヘッダ
 	char signature[3] = {};		//シグネチャ
 	PMDHeader pmdheader = {};	//PMD ヘッダ
@@ -153,7 +155,6 @@ bool PMDActor::Init(ID3D12Device* device) {
 		return false;
 	}
 
-
 	// マテリアル情報を読み込む
 	unsigned int materialNum;
 	fread(&materialNum, sizeof(materialNum), 1, fp);
@@ -165,8 +166,18 @@ bool PMDActor::Init(ID3D12Device* device) {
 		fp
 	);
 
+	// ボーン情報を読み込む
+	unsigned short boneNum = 0;
+	fread(&boneNum, sizeof(boneNum), 1, fp);
+
+	vector<PMDBone> pmdBones(boneNum);
+	fread(pmdBones.data(), sizeof(PMDBone), boneNum, fp);
+
 	fclose(fp);
 
+
+
+	// 取得したマテリアル情報からリソースを構築していく
 	m_materials.resize(materialNum);
 	vector<ID3D12Resource*> textureResources(materialNum, nullptr);
 	vector<ID3D12Resource*> sphResources(materialNum, nullptr);
@@ -323,7 +334,7 @@ bool PMDActor::Init(ID3D12Device* device) {
 	matCBVDesc.BufferLocation = m_materialBuff->GetGPUVirtualAddress();
 	matCBVDesc.SizeInBytes = materialBuffSize;
 	// ディスクリプタヒープの先頭アドレスを記録
-	auto matDescHeapHandle = m_materialDescHeap->GetCPUDescriptorHandleForHeapStart();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE matDescHeapHandle(m_materialDescHeap->GetCPUDescriptorHandleForHeapStart());
 	auto incSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 
