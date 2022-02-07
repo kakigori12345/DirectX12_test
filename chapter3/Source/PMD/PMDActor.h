@@ -116,6 +116,12 @@ private:
 	float		m_angleY;
 
 private:
+	std::vector<ComPtr<ID3D12Resource>> m_textureResources;
+	std::vector<ComPtr<ID3D12Resource>> m_sphResources;
+	std::vector<ComPtr<ID3D12Resource>> m_spaResources;
+	std::vector<ComPtr<ID3D12Resource>> m_toonResources;
+
+private:
 	Transform						m_transform;
 	Transform*						m_mappedTransform;
 	ComPtr<ID3D12Resource>			m_transformBuff;

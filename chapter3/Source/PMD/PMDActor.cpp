@@ -184,10 +184,10 @@ bool PMDActor::Init(ID3D12Device* device) {
 
 	// マテリアル
 	m_materials.resize(materialNum);
-	vector<ID3D12Resource*> textureResources(materialNum, nullptr);
-	vector<ID3D12Resource*> sphResources(materialNum, nullptr);
-	vector<ID3D12Resource*> spaResources(materialNum, nullptr);
-	vector<ID3D12Resource*> toonResources(materialNum, nullptr);
+	m_textureResources.resize(materialNum, nullptr);
+	m_sphResources.resize(materialNum, nullptr);
+	m_spaResources.resize(materialNum, nullptr);
+	m_toonResources.resize(materialNum, nullptr);
 
 	{
 		// コピー
@@ -203,7 +203,7 @@ bool PMDActor::Init(ID3D12Device* device) {
 		// テクスチャ
 		for (unsigned int i = 0; i < materialNum; ++i) {
 			if (strlen(pmdMaterials[i].texFilePath) == 0) {
-				textureResources[i] = nullptr;
+				m_textureResources[i] = nullptr;
 				continue;
 			}
 
@@ -214,7 +214,7 @@ bool PMDActor::Init(ID3D12Device* device) {
 			sprintf_s(toonFileName, "toon%02d.bmp", pmdMaterials[i].toonIdx + 1);
 			toonFilePath += toonFileName;
 
-			toonResources[i] = PMDRenderer::LoadTextureFromFile(toonFilePath, device);
+			m_toonResources[i] = PMDRenderer::LoadTextureFromFile(toonFilePath, device);
 
 			// 各種テクスチャを読み込む
 			string texFileName = pmdMaterials[i].texFilePath;
@@ -262,15 +262,15 @@ bool PMDActor::Init(ID3D12Device* device) {
 			// モデルとテクスチャパスから、プログラムから見たテクスチャパスを取得
 			if (texFileName != "") {
 				auto texFilePath = GetTexturePathFromModelAndTexPath(m_modelPath, texFileName.c_str());
-				textureResources[i] = PMDRenderer::LoadTextureFromFile(texFilePath, device);
+				m_textureResources[i] = PMDRenderer::LoadTextureFromFile(texFilePath, device);
 			}
 			if (sphFileName != "") {
 				auto sphFilePath = GetTexturePathFromModelAndTexPath(m_modelPath, sphFileName.c_str());
-				sphResources[i] = PMDRenderer::LoadTextureFromFile(sphFilePath, device);
+				m_sphResources[i] = PMDRenderer::LoadTextureFromFile(sphFilePath, device);
 			}
 			if (spaFileName != "") {
 				auto spaFilePath = GetTexturePathFromModelAndTexPath(m_modelPath, spaFileName.c_str());
-				spaResources[i] = PMDRenderer::LoadTextureFromFile(spaFilePath, device);
+				m_spaResources[i] = PMDRenderer::LoadTextureFromFile(spaFilePath, device);
 			}
 		}
 	}
@@ -358,11 +358,11 @@ bool PMDActor::Init(ID3D12Device* device) {
 
 
 		// テクスチャ用ビュー
-		if (textureResources[i] != nullptr) {
+		if (m_textureResources[i] != nullptr) {
 			// 読み込んだテクスチャ
-			srvDesc.Format = textureResources[i]->GetDesc().Format;
+			srvDesc.Format = m_textureResources[i]->GetDesc().Format;
 			device->CreateShaderResourceView(
-				textureResources[i], &srvDesc, matDescHeapHandle
+				m_textureResources[i].Get(), &srvDesc, matDescHeapHandle
 			);
 		}
 		else {
@@ -376,10 +376,10 @@ bool PMDActor::Init(ID3D12Device* device) {
 
 
 		// sph 用ビュー
-		if (sphResources[i] != nullptr) {
-			srvDesc.Format = sphResources[i]->GetDesc().Format;
+		if (m_sphResources[i] != nullptr) {
+			srvDesc.Format = m_sphResources[i]->GetDesc().Format;
 			device->CreateShaderResourceView(
-				sphResources[i], &srvDesc, matDescHeapHandle
+				m_sphResources[i].Get(), &srvDesc, matDescHeapHandle
 			);
 		}
 		else {
@@ -393,10 +393,10 @@ bool PMDActor::Init(ID3D12Device* device) {
 
 
 		// spa 用ビュー
-		if (spaResources[i] != nullptr) {
-			srvDesc.Format = spaResources[i]->GetDesc().Format;
+		if (m_spaResources[i] != nullptr) {
+			srvDesc.Format = m_spaResources[i]->GetDesc().Format;
 			device->CreateShaderResourceView(
-				spaResources[i], &srvDesc, matDescHeapHandle
+				m_spaResources[i].Get(), &srvDesc, matDescHeapHandle
 			);
 		}
 		else {
@@ -410,10 +410,10 @@ bool PMDActor::Init(ID3D12Device* device) {
 
 
 		// トゥーンリソース用ビュー
-		if (toonResources[i] != nullptr) {
-			srvDesc.Format = toonResources[i]->GetDesc().Format;
+		if (m_toonResources[i] != nullptr) {
+			srvDesc.Format = m_toonResources[i]->GetDesc().Format;
 			device->CreateShaderResourceView(
-				toonResources[i], &srvDesc, matDescHeapHandle
+				m_toonResources[i].Get(), &srvDesc, matDescHeapHandle
 			);
 		}
 		else {

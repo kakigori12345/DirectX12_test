@@ -29,40 +29,48 @@ namespace {
 	using LoadLambda_t = function<HRESULT(const wstring& path, TexMetadata*, ScratchImage&)>;
 	std::map<string, LoadLambda_t> loadLambdaTable;
 
-	// 白テクスチャ作成
-	ID3D12Resource* CreateWhiteTexture(ID3D12Device* dev) {
+	// デフォルトテクスチャ作成
+	ID3D12Resource* CreateDefaultTexture(ID3D12Device* dev, size_t height, size_t width) {
 		D3D12_HEAP_PROPERTIES texHeapProp = CD3DX12_HEAP_PROPERTIES(
 			D3D12_CPU_PAGE_PROPERTY_WRITE_BACK,
 			D3D12_MEMORY_POOL_L0);
 
 		D3D12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-			DXGI_FORMAT_R8G8B8A8_UNORM, 4, 4);
+			DXGI_FORMAT_R8G8B8A8_UNORM, height, width);
 
-		ID3D12Resource* whiteBuff = nullptr;
+		ID3D12Resource* texBuff = nullptr;
 		auto result = dev->CreateCommittedResource(
 			&texHeapProp,
 			D3D12_HEAP_FLAG_NONE,
 			&resDesc,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			nullptr,
-			IID_PPV_ARGS(&whiteBuff)
+			IID_PPV_ARGS(&texBuff)
 		);
 
 		if (FAILED(result)) {
 			return nullptr;
 		}
 
+		return texBuff;
+	}
+
+	// 白テクスチャ作成
+	ID3D12Resource* CreateWhiteTexture(ID3D12Device* dev) {
+		ID3D12Resource* whiteBuff = CreateDefaultTexture(dev, 4, 4);
+
 		std::vector<unsigned char> data(4 * 4 * 4);
 		std::fill(data.begin(), data.end(), 0xff);	//全部255で埋める
 
 		// データ転送
-		result = whiteBuff->WriteToSubresource(
+		auto result = whiteBuff->WriteToSubresource(
 			0,
 			nullptr,
 			data.data(),
 			4 * 4,
 			data.size()
 		);
+		assert(SUCCEEDED(result));
 
 		return whiteBuff;
 	}
@@ -70,38 +78,20 @@ namespace {
 
 	// 黒テクスチャ作成
 	ID3D12Resource* CreateBlackTexture(ID3D12Device* dev) {
-		D3D12_HEAP_PROPERTIES texHeapProp = CD3DX12_HEAP_PROPERTIES(
-			D3D12_CPU_PAGE_PROPERTY_WRITE_BACK,
-			D3D12_MEMORY_POOL_L0);
-
-		D3D12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-			DXGI_FORMAT_R8G8B8A8_UNORM, 4, 4);
-
-		ID3D12Resource* blackBuff = nullptr;
-		auto result = dev->CreateCommittedResource(
-			&texHeapProp,
-			D3D12_HEAP_FLAG_NONE,
-			&resDesc,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-			nullptr,
-			IID_PPV_ARGS(&blackBuff)
-		);
-
-		if (FAILED(result)) {
-			return nullptr;
-		}
+		ID3D12Resource* blackBuff = CreateDefaultTexture(dev, 4, 4);
 
 		std::vector<unsigned char> data(4 * 4 * 4);
 		std::fill(data.begin(), data.end(), 0x00);	//全部0で埋める
 
 		// データ転送
-		result = blackBuff->WriteToSubresource(
+		auto result = blackBuff->WriteToSubresource(
 			0,
 			nullptr,
 			data.data(),
 			4 * 4,
 			data.size()
-		);
+		); 
+		assert(SUCCEEDED(result));
 
 		return blackBuff;
 	}
@@ -109,47 +99,26 @@ namespace {
 
 	// デフォルトグラデーションテクスチャ（トゥーン用）
 	ID3D12Resource* CreateGrayGradationTexture(ID3D12Device* dev) {
-		D3D12_HEAP_PROPERTIES texHeapProp = CD3DX12_HEAP_PROPERTIES(
-			D3D12_CPU_PAGE_PROPERTY_WRITE_BACK,
-			D3D12_MEMORY_POOL_L0);
-
-		D3D12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-			DXGI_FORMAT_R8G8B8A8_UNORM, 4, 256);
-
-		ID3D12Resource* gradBuff = nullptr;
-		auto result = dev->CreateCommittedResource(
-			&texHeapProp,
-			D3D12_HEAP_FLAG_NONE,
-			&resDesc,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-			nullptr,
-			IID_PPV_ARGS(&gradBuff)
-		);
-
-		if (FAILED(result)) {
-			return nullptr;
-		}
+		ID3D12Resource* gradBuff = CreateDefaultTexture(dev, 4, 256);
 
 		std::vector<unsigned char> data(4 * 256);
 		auto it = data.begin();
 		unsigned int c = 0xff;
 		for (; it != data.end(); it += 4) {
-			auto test1 = c << 24;
-			auto test2 = c << 16;
-			auto test3 = c << 8;
-			auto col = (c << 24) | (c << 16) | (c << 8) | c;
+			unsigned int  col = (0xff << 24) | RGB(c, c, c);//RGBAが逆並びしているためRGBマクロと0xff<<24を用いて表す。
 			fill(it, it + 4, col);
 			--c;
 		}
 
 		// データ転送
-		result = gradBuff->WriteToSubresource(
+		auto result = gradBuff->WriteToSubresource(
 			0,
 			nullptr,
 			data.data(),
 			4 * sizeof(unsigned int),
 			sizeof(unsigned int) * data.size()
 		);
+		assert(SUCCEEDED(result));
 
 		return gradBuff;
 	}
