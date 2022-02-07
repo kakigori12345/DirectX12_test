@@ -202,11 +202,6 @@ bool PMDActor::Init(ID3D12Device* device) {
 
 		// テクスチャ
 		for (unsigned int i = 0; i < materialNum; ++i) {
-			if (strlen(pmdMaterials[i].texFilePath) == 0) {
-				m_textureResources[i] = nullptr;
-				continue;
-			}
-
 			// トゥーンリソースの読み込み
 			string toonFilePath = "data/toon/";
 			char toonFileName[16];
@@ -215,6 +210,12 @@ bool PMDActor::Init(ID3D12Device* device) {
 			toonFilePath += toonFileName;
 
 			m_toonResources[i] = PMDRenderer::LoadTextureFromFile(toonFilePath, device);
+
+			// テクスチャパスがないならスキップ
+			if (strlen(pmdMaterials[i].texFilePath) == 0) {
+				m_textureResources[i] = nullptr;
+				continue;
+			}
 
 			// 各種テクスチャを読み込む
 			string texFileName = pmdMaterials[i].texFilePath;
