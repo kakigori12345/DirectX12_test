@@ -42,7 +42,9 @@ PMDActor::PMDActor(string modelPath)
 	, m_ibView()
 	, m_materials()
 	, m_materialDescHeap(nullptr)
-	, m_materialBuff(nullptr){
+	, m_materialBuff(nullptr)
+	, m_boneNodeTable()
+	, m_boneMatrices(){
 }
 
 //! @brief デストラクタ
@@ -176,8 +178,11 @@ bool PMDActor::Init(ID3D12Device* device) {
 	fclose(fp);
 
 
+	//-----------------------------------------
+	// ファイルから読み込んだ情報でデータを構築
+	//-----------------------------------------
 
-	// 取得したマテリアル情報からリソースを構築していく
+	// マテリアル
 	m_materials.resize(materialNum);
 	vector<ID3D12Resource*> textureResources(materialNum, nullptr);
 	vector<ID3D12Resource*> sphResources(materialNum, nullptr);
@@ -420,6 +425,40 @@ bool PMDActor::Init(ID3D12Device* device) {
 		}
 		matDescHeapHandle.ptr += incSize;
 	}
+
+
+
+
+	// ボーン
+
+	// インデックスと名前の対応関係構築のために後で使う
+	vector<string> boneNames(pmdBones.size());
+
+	// ボーンノードマップを作る
+	for (int idx = 0; idx < pmdBones.size(); ++idx) {
+		PMDBone& pb = pmdBones[idx];
+		boneNames[idx] = pb.boneName;
+		BoneNode& node = m_boneNodeTable[pb.boneName];
+		node.boneIdx = idx;
+		node.startPos = pb.pos;
+	}
+	// 親子関係を構築する
+	for (PMDBone& pb : pmdBones) {
+		// 親インデックスをチェック（ありえない番号なら飛ばす）
+		if (pb.parentNo >= pmdBones.size()) {
+			DebugOutputFormatString("Warning: ボーンの親番号が不正でした。");
+			continue;
+		}
+
+		string parentName = boneNames[pb.parentNo];
+		m_boneNodeTable[parentName].children.emplace_back(
+			&m_boneNodeTable[pb.boneName]
+		);
+
+	}
+	
+	m_boneMatrices.resize(pmdBones.size());
+
 
 	return true;
 }

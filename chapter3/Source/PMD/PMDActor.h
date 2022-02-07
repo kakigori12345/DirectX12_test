@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include <wrl.h>
 
@@ -67,6 +68,14 @@ struct PMDBone {
 };
 #pragma pack()
 
+// 一つのボーンを表す。種類は回転と決め打ち
+struct BoneNode {
+	int boneIdx;				// ボーンインデックス
+	DirectX::XMFLOAT3 startPos;	// ボーン基準点（回転の中心）
+	DirectX::XMFLOAT3 endPos;	// ボーン先端点
+	std::vector<BoneNode*> children;	// 子ノード
+};
+
 
 class PMDActor {
 	template<typename T>
@@ -123,4 +132,8 @@ private:
 	std::vector<Material>			m_materials;
 	ComPtr<ID3D12DescriptorHeap>	m_materialDescHeap;
 	ComPtr<ID3D12Resource>			m_materialBuff;
+
+private:
+	std::map<std::string, BoneNode> m_boneNodeTable;
+	std::vector<DirectX::XMMATRIX>	m_boneMatrices;	// GPUへコピーするボーン情報
 };
