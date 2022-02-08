@@ -31,6 +31,10 @@ Transform::operator new(size_t size) {
 PMDActor::PMDActor(string modelPath)
 	: m_modelPath(modelPath)
 	, m_angleY(0.0f)
+	, m_textureResources()
+	, m_sphResources()
+	, m_spaResources()
+	, m_toonResources()
 	, m_transform()
 	, m_mappedTransform(nullptr)
 	, m_transformBuff(nullptr)
@@ -44,7 +48,8 @@ PMDActor::PMDActor(string modelPath)
 	, m_materialDescHeap(nullptr)
 	, m_materialBuff(nullptr)
 	, m_boneNodeTable()
-	, m_boneMatrices(){
+	, m_boneMatrices()
+	, m_mappedMatrices(nullptr) {
 }
 
 //! @brief デストラクタ
@@ -150,12 +155,6 @@ bool PMDActor::Init(ID3D12Device* device) {
 	m_ibView.BufferLocation = m_idxBuff->GetGPUVirtualAddress();
 	m_ibView.Format = DXGI_FORMAT_R16_UINT;
 	m_ibView.SizeInBytes = indices.size() * sizeof(indices[0]);
-
-
-	// ワールド座標の用意
-	if (!_CreateTransformView(device)) {
-		return false;
-	}
 
 	// マテリアル情報を読み込む
 	unsigned int materialNum;
@@ -459,6 +458,25 @@ bool PMDActor::Init(ID3D12Device* device) {
 	}
 	
 	m_boneMatrices.resize(pmdBones.size());
+	// ボーンをすべて初期化
+	std::fill(
+		m_boneMatrices.begin(),
+		m_boneMatrices.end(),
+		XMMatrixIdentity()
+	);
+
+	////test
+	auto node = m_boneNodeTable["左腕"];
+	auto& pos = node.startPos;
+	m_boneMatrices[node.boneIdx] =
+		XMMatrixTranslation(-pos.x, -pos.y, -pos.z)
+		* XMMatrixRotationZ(XM_PIDIV2)
+		* XMMatrixTranslation(pos.x, pos.y, pos.z);
+
+	// ワールド座標の用意
+	if (!_CreateTransformView(device)) {
+		return false;
+	}
 
 
 	return true;
@@ -480,15 +498,17 @@ void PMDActor::GetDrawInfo(DrawActorInfo& output) const {
 //! @brief 描画情報更新
 void PMDActor::Update() {
 	m_angleY += 0.03f;
-	m_mappedTransform->world = XMMatrixRotationY(m_angleY);
+	//m_mappedTransform->world = XMMatrixRotationY(m_angleY);
+	m_mappedMatrices[0] = XMMatrixRotationY(m_angleY);
 }
 
 
-//座標変換用ビューの生成
+//! @brief 座標変換用ビューの生成
+//! @note ワールドとボーンをまとめて処理しているが、本来わけたほうがいいと思う
 bool
 PMDActor::_CreateTransformView(ID3D12Device* device) {
 	//GPUバッファ作成
-	auto buffSize = sizeof(Transform);
+	auto buffSize = sizeof(XMMATRIX) * (1 + m_boneMatrices.size()); // ワールド行列＋ボーン数
 	buffSize = (buffSize + 0xff) & ~0xff;
 	auto heapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(buffSize);
@@ -507,12 +527,16 @@ PMDActor::_CreateTransformView(ID3D12Device* device) {
 	}
 
 	//マップとコピー
-	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappedTransform);
+	result = m_transformBuff->Map(0, nullptr, (void**)&m_mappedMatrices);
 	if (FAILED(result)) {
 		assert(SUCCEEDED(result));
 		return false;
 	}
-	*m_mappedTransform = m_transform;
+
+	// ０番にワールド行列、１番以降にボーン行列
+	m_mappedMatrices[0] = m_transform.world;
+	copy(m_boneMatrices.begin(), m_boneMatrices.end(), m_mappedMatrices + 1); //ワールドは外すために＋１
+
 
 	//ビューの作成
 	D3D12_DESCRIPTOR_HEAP_DESC transformDescHeapDesc = {};

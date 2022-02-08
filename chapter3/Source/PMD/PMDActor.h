@@ -142,4 +142,5 @@ private:
 private:
 	std::map<std::string, BoneNode> m_boneNodeTable;
 	std::vector<DirectX::XMMATRIX>	m_boneMatrices;	// GPUへコピーするボーン情報
+	DirectX::XMMATRIX*				m_mappedMatrices;
 };

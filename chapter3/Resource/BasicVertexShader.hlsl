@@ -8,6 +8,7 @@ Output BasicVS(
 	min16uint weight : WEIGHT)
 {
 	Output output; //ピクセルシェーダーへ渡す
+	pos = mul(bones[boneno[0]], pos);
 	pos = mul(world, pos);
 	output.svpos = mul( mul(proj, view), pos); //シェーダーは列優先
 	output.pos = mul(view, pos);
